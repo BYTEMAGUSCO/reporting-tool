@@ -1,10 +1,24 @@
-.generic-centered-container {
+.generic-centered-container { /*This is a full screen container that centers all elements inside it*/
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   padding:10px;
+  height: 100vh;
+  gap: 1rem; 
+  background-color:red;
 }
-span{
-    text-align:center;
+
+.form-box { /*A generic style for the form box, reuse as much as possible*/
+  display: flex;
+  flex-direction: column;
+  gap: 1rem; 
+  padding: 2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color:blue;
+}
+
+.title-center {/*generic style of centering texts*/
+  text-align: center;
 }

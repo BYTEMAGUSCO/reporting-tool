@@ -1,9 +1,16 @@
-const LogInOrgB = () =>{
+import { TextField, Button } from '@mui/material';
+
+const LogInOrgB = () => {
     return (
-        <div>
-            <h1>Org B Log In</h1>
-           
+        <div className="generic-centered-container">
+            <div className="form-box">
+                <h1 className="title-center">Org B Log In</h1>
+                <TextField label="Username" variant="outlined" fullWidth margin="normal" />
+                <TextField label="Password" type="password" variant="outlined" fullWidth margin="normal" />
+                <Button variant="contained" fullWidth>Log In</Button>
+            </div>
         </div>
     );
 };
-export default LogInOrgB
+
+export default LogInOrgB;

@@ -5,17 +5,18 @@ import '../styles/MainStyles.css';
 const MainMenu = () =>{
     const navigate = useNavigate();
     return (
-        <div>
-            <span><h1>Main Menu</h1></span>
-            <div className="generic-centered-container">
-                <Button variant="contained" onClick={() => navigate('/login/LogInOrgA')}>
+        <div className="generic-centered-container">
+            <div className="form-box">
+                <h1 className="title-center">Main Menu</h1>
+                <Button variant="contained" fullWidth onClick={() => navigate('/login/LogInOrgA')}>
                     Login as Org A
                 </Button>
-                <Button variant="outlined" onClick={() => navigate('/login/LogInOrgB')}>
+                <Button variant="outlined" fullWidth onClick={() => navigate('/login/LogInOrgB')}>
                     Login as Org B
                 </Button>
             </div>
-        </div> 
+            
+        </div>
     );
 };
 export default MainMenu
