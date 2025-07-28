@@ -1,0 +1,19 @@
+.dashboard-root {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-toolbar {
+  justify-content: space-between;
+}
+
+.dashboard-tabs {
+  background-color: #f5f5f5;
+}
+
+.dashboard-content {
+  flex-grow: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
