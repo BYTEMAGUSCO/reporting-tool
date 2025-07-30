@@ -30,7 +30,7 @@ const LogInOrgA = () => {
 
         setError(userFriendlyMessage);
 
-        console.warn("🪵 Login Debug Info:", {
+        console.warn('🪵 Login Debug Info:', {
           code: result.code || 'N/A',
           status: result.status || 'N/A',
           raw: result.raw || null,
@@ -41,19 +41,16 @@ const LogInOrgA = () => {
 
       console.log('🚀 Navigating to dashboard...');
       navigate('/dashboard/orgA/DashboardOrgA');
-
     } catch (err) {
       setLoading(false);
       setError('Something went really wrong 💀 Please try again.');
-      console.error("🔥 Unexpected login error:", err);
+      console.error('🔥 Unexpected login error:', err);
     }
   };
 
   return (
     <div className="generic-centered-container">
-
       <div className="form-box">
-   
         <GovHeader logoWidth={350} logoHeight={200} titleSize="h5" />
 
         <Typography
@@ -75,6 +72,7 @@ const LogInOrgA = () => {
             required
             margin="dense"
             autoComplete="off"
+            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Password"
@@ -85,10 +83,17 @@ const LogInOrgA = () => {
             required
             margin="dense"
             autoComplete="off"
+            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
 
           {error && (
-            <Alert severity="error" style={{ marginTop: '1rem' }}>
+            <Alert
+              severity="error"
+              sx={{
+                mt: '1rem',
+                borderRadius: '0.5rem',
+              }}
+            >
               {error}
             </Alert>
           )}
@@ -97,8 +102,12 @@ const LogInOrgA = () => {
             type="submit"
             variant="contained"
             fullWidth
-            style={{ marginTop: '1rem' }}
             disabled={loading}
+            sx={{
+              mt: '1rem',
+              fontWeight: 'bold',
+              borderRadius: '0.5rem',
+            }}
           >
             {loading ? 'Logging in...' : 'Log In'}
           </Button>
@@ -127,7 +136,6 @@ const LogInOrgA = () => {
             Register Account →
           </Typography>
         </div>
-
       </div>
     </div>
   );

@@ -1,3 +1,5 @@
+import { showSuccessAlert, showErrorAlert } from '@/services/alert';
+
 export async function handleSaveLayout(formName, questions, token, supabaseUrl) {
   const isValid =
     formName.trim() !== '' &&
@@ -9,13 +11,13 @@ export async function handleSaveLayout(formName, questions, token, supabaseUrl) 
     );
 
   if (!isValid) {
-    alert('Please fill in all required fields before saving!');
-    return;
+    showErrorAlert('Please fill in all required fields before saving!');
+    return false;
   }
 
   if (!token) {
-    alert('User not authenticated!');
-    return;
+    showErrorAlert('User not authenticated!');
+    return false;
   }
 
   const layout = questions.map((q) => q.toJSON());
@@ -38,12 +40,12 @@ export async function handleSaveLayout(formName, questions, token, supabaseUrl) 
 
     if (!response.ok) throw new Error(result?.error?.message || 'Failed to save form');
 
-    alert('Form saved successfully!');
+    showSuccessAlert('Form saved successfully!');
     console.log('✅ Server response:', result);
     return true;
   } catch (err) {
     console.error('🧨 Error saving form:', err);
-    alert('Error saving form: ' + err.message);
+    showErrorAlert('Error saving form: ' + err.message);
     return false;
   }
 }

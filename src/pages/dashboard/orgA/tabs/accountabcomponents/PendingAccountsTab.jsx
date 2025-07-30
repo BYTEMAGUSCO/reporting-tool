@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Typography,
   Table,
@@ -14,12 +14,12 @@ import {
 } from '@mui/material';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
-import useRejectedAccounts from '@/services/useRejectedAccounts';
-import AccountActions from './components/AccountActions';
+import usePendingAccounts from '@/services/usePendingAccounts';
+import AccountActions from '../components/AccountActions';
 
 const PAGE_LIMIT = 8;
 
-const RejectedAccountsTab = () => {
+const PendingAccountsTab = () => {
   const token = JSON.parse(sessionStorage.getItem('session'))?.access_token;
   const [page, setPage] = useState(1);
 
@@ -30,11 +30,11 @@ const RejectedAccountsTab = () => {
     sortBy: 'name',
   });
 
-  const { data = {}, loading, refetch } = useRejectedAccounts(token, page, PAGE_LIMIT);
+  const { data, loading, refetch } = usePendingAccounts(token, page, PAGE_LIMIT);
 
   const filteredSortedAccounts = useMemo(() => {
-    let allAccounts = data.data || [];
-    const { searchTerm, org, sortBy } = filters;
+    let allAccounts = (data.data || []).filter((acc) => acc.request_status === 'P');
+    const { searchTerm, org, approval, sortBy } = filters;
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
@@ -49,7 +49,10 @@ const RejectedAccountsTab = () => {
       allAccounts = allAccounts.filter((acc) => acc.requester_role === org);
     }
 
-    allAccounts = allAccounts.filter((acc) => acc.request_status === 'D');
+    if (approval !== 'all') {
+      const map = { approved: 'A', pending: 'P' };
+      allAccounts = allAccounts.filter((acc) => acc.request_status === map[approval]);
+    }
 
     allAccounts.sort((a, b) => {
       if (sortBy === 'dateCreated') {
@@ -62,26 +65,44 @@ const RejectedAccountsTab = () => {
   }, [data.data, filters]);
 
   return (
-    <Box sx={{ px: 2, py: 2 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+    <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+        sx={{ borderRadius: '0.5rem' }}
+      >
         <Typography variant="h5" fontWeight="bold">
-          View Rejected Accounts
+          View Pending Accounts
         </Typography>
       </Box>
 
       <AccountsControlPanel filters={filters} setFilters={setFilters} />
-      <Divider sx={{ my: 2 }} />
+      <Divider sx={{ my: 2, borderRadius: '0.5rem' }} />
 
-      <Box sx={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
-        <Table size="small" stickyHeader sx={{ minWidth: 900 }}>
+      <Box
+        sx={{
+          overflowX: 'auto',
+          maxHeight: '60vh',
+          overflowY: 'auto',
+          borderRadius: '0.5rem',
+        }}
+      >
+        <Table
+          size="small"
+          stickyHeader
+          sx={{ minWidth: 900, borderRadius: '0.5rem' }}
+        >
           <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
-            <TableRow>
+            <TableRow sx={{ borderRadius: '0.5rem' }}>
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Role</strong></TableCell>
               <TableCell><strong>Phone</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
+              <TableCell align="right"><strong>Action</strong></TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -99,13 +120,13 @@ const RejectedAccountsTab = () => {
               <TableRow>
                 <TableCell colSpan={7}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
-                    No rejected accounts found.
+                    No pending accounts found.
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
               filteredSortedAccounts.map((acc, i) => (
-                <TableRow key={i} hover>
+                <TableRow key={i} hover sx={{ borderRadius: '0.5rem' }}>
                   <TableCell>{acc.requester_name}</TableCell>
                   <TableCell>{acc.requester_email}</TableCell>
                   <TableCell>{acc.requester_role}</TableCell>
@@ -115,10 +136,33 @@ const RejectedAccountsTab = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label="Rejected"
-                      color="error"
+                      label={
+                        acc.request_status === 'A'
+                          ? 'Approved'
+                          : acc.request_status === 'R'
+                          ? 'Rejected'
+                          : 'Pending'
+                      }
+                      color={
+                        acc.request_status === 'A'
+                          ? 'success'
+                          : acc.request_status === 'R'
+                          ? 'error'
+                          : 'warning'
+                      }
                       size="small"
-                      sx={{ fontSize: '0.7rem', height: '22px' }}
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: '22px',
+                        borderRadius: '0.5rem',
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell align="right">
+                    <AccountActions
+                      account={acc}
+                      token={token}
+                      onActionComplete={refetch}
                     />
                   </TableCell>
                 </TableRow>
@@ -128,16 +172,17 @@ const RejectedAccountsTab = () => {
         </Table>
       </Box>
 
-      <Box display="flex" justifyContent="center" mt={3}>
+      <Box display="flex" justifyContent="center" mt={3} sx={{ borderRadius: '0.5rem' }}>
         <Pagination
-          count={data.totalPages || 1}
+          count={data.totalPages}
           page={page}
           onChange={(_, value) => setPage(value)}
           color="primary"
+          sx={{ borderRadius: '0.5rem' }}
         />
       </Box>
     </Box>
   );
 };
 
-export default RejectedAccountsTab;
+export default PendingAccountsTab;

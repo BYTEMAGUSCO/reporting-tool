@@ -10,7 +10,7 @@ import {
   Box,
   Stack,
 } from '@mui/material';
-import QuestionRenderer from '../formbuildercomponents/QuestionRenderer'; // reuse question renderer from the formbuilder
+import QuestionRenderer from '../formtab/formbuildercomponents/QuestionRenderer'; // reuse question renderer from the formbuilder
 
 const FormPreviewModal = ({ open, onClose, parsed }) => {
   const safeFields = Array.isArray(parsed) ? parsed : [];

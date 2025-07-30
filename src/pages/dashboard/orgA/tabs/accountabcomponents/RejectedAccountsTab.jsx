@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Typography,
   Table,
@@ -11,15 +11,16 @@ import {
   Skeleton,
   Pagination,
   Divider,
+  Paper,
 } from '@mui/material';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
-import useApprovedAccounts from '@/services/useApprovedAccounts';
-import AccountActions from './components/AccountActions';
+import useRejectedAccounts from '@/services/useRejectedAccounts';
+import AccountActions from '../components/AccountActions';
 
 const PAGE_LIMIT = 8;
 
-const ApprovedAccountsTab = () => {
+const RejectedAccountsTab = () => {
   const token = JSON.parse(sessionStorage.getItem('session'))?.access_token;
   const [page, setPage] = useState(1);
 
@@ -30,7 +31,7 @@ const ApprovedAccountsTab = () => {
     sortBy: 'name',
   });
 
-  const { data, loading, refetch } = useApprovedAccounts(token, page, PAGE_LIMIT);
+  const { data = {}, loading, refetch } = useRejectedAccounts(token, page, PAGE_LIMIT);
 
   const filteredSortedAccounts = useMemo(() => {
     let allAccounts = data.data || [];
@@ -49,8 +50,7 @@ const ApprovedAccountsTab = () => {
       allAccounts = allAccounts.filter((acc) => acc.requester_role === org);
     }
 
-    // Only include approved accounts (this is technically redundant if backend already filters it)
-    allAccounts = allAccounts.filter((acc) => acc.request_status === 'A');
+    allAccounts = allAccounts.filter((acc) => acc.request_status === 'D');
 
     allAccounts.sort((a, b) => {
       if (sortBy === 'dateCreated') {
@@ -63,19 +63,45 @@ const ApprovedAccountsTab = () => {
   }, [data.data, filters]);
 
   return (
-    <Box sx={{ px: 2, py: 2 }}>
+    <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" fontWeight="bold">
-          View Approved Accounts
+          View Rejected Accounts
         </Typography>
       </Box>
 
-      <AccountsControlPanel filters={filters} setFilters={setFilters} />
-      <Divider sx={{ my: 2 }} />
+      <Box sx={{ borderRadius: '0.5rem' }}>
+        <AccountsControlPanel filters={filters} setFilters={setFilters} />
+      </Box>
 
-      <Box sx={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto' }}>
-        <Table size="small" stickyHeader sx={{ minWidth: 900 }}>
-          <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
+      <Divider sx={{ my: 2, borderRadius: '0.5rem' }} />
+
+      <Box
+        sx={{
+          overflowX: 'auto',
+          maxHeight: '60vh',
+          overflowY: 'auto',
+          borderRadius: '0.5rem',
+        }}
+      >
+        <Table
+          size="small"
+          stickyHeader
+          sx={{
+            minWidth: 900,
+            borderRadius: '0.5rem',
+            '& thead': {
+              backgroundColor: '#f5f7fa',
+            },
+            '& thead th': {
+              borderRadius: '0.5rem 0.5rem 0 0',
+            },
+            '& tbody tr:last-child td': {
+              borderRadius: '0 0 0.5rem 0.5rem',
+            },
+          }}
+        >
+          <TableHead>
             <TableRow>
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Email</strong></TableCell>
@@ -91,7 +117,7 @@ const ApprovedAccountsTab = () => {
                 <TableRow key={i}>
                   {Array(7).fill().map((_, j) => (
                     <TableCell key={j} sx={{ py: 0.5 }}>
-                      <Skeleton variant="text" height={20} />
+                      <Skeleton variant="text" height={20} sx={{ borderRadius: '0.5rem' }} />
                     </TableCell>
                   ))}
                 </TableRow>
@@ -100,13 +126,13 @@ const ApprovedAccountsTab = () => {
               <TableRow>
                 <TableCell colSpan={7}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
-                    No approved accounts found.
+                    No rejected accounts found.
                   </Typography>
                 </TableCell>
               </TableRow>
             ) : (
               filteredSortedAccounts.map((acc, i) => (
-                <TableRow key={i} hover>
+                <TableRow key={i} hover sx={{ borderRadius: '0.5rem' }}>
                   <TableCell>{acc.requester_name}</TableCell>
                   <TableCell>{acc.requester_email}</TableCell>
                   <TableCell>{acc.requester_role}</TableCell>
@@ -116,13 +142,12 @@ const ApprovedAccountsTab = () => {
                   </TableCell>
                   <TableCell>
                     <Chip
-                      label="Approved"
-                      color="success"
+                      label="Rejected"
+                      color="error"
                       size="small"
-                      sx={{ fontSize: '0.7rem', height: '22px' }}
+                      sx={{ fontSize: '0.7rem', height: '22px', borderRadius: '0.5rem' }}
                     />
                   </TableCell>
-
                 </TableRow>
               ))
             )}
@@ -130,16 +155,17 @@ const ApprovedAccountsTab = () => {
         </Table>
       </Box>
 
-      <Box display="flex" justifyContent="center" mt={3}>
+      <Box display="flex" justifyContent="center" mt={3} sx={{ borderRadius: '0.5rem' }}>
         <Pagination
-          count={data.totalPages}
+          count={data.totalPages || 1}
           page={page}
           onChange={(_, value) => setPage(value)}
           color="primary"
+          sx={{ borderRadius: '0.5rem' }}
         />
       </Box>
     </Box>
   );
 };
 
-export default ApprovedAccountsTab;
+export default RejectedAccountsTab;

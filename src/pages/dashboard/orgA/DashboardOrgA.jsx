@@ -9,33 +9,32 @@ import {
   ListItemText,
   Typography,
   Button,
+  useTheme,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
-import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import AssignmentIcon from '@mui/icons-material/Assignment';
-
+import LogoutIcon from '@mui/icons-material/Logout';
 
 import OverviewTab from './tabs/OverviewTab';
-import FormBuilderTab from './tabs/FormBuilderTab';
-import ManageFormsTab from './tabs/ManageFormsTab';
-import GovLogoOnly from './../../reusables/GovLogoOnly';
 import ViewAccountsTab from './tabs/ViewAccountsTab';
+import GovLogoOnly from './../../reusables/GovLogoOnly';
+import FormTabs from './tabs/FormTabs';
 
 const drawerWidth = 260;
 
 const tabs = [
-  { label: 'Overview', icon: <DashboardIcon sx={{ color: 'black' }} />, component: <OverviewTab /> },
-  { label: 'Account Management', icon: <PeopleIcon sx={{ color: 'black' }} />, component: <ViewAccountsTab /> },
-  { label: 'Form Builder', icon: <FormatListBulletedIcon sx={{ color: 'black' }} />, component: <FormBuilderTab /> },
-  { label: 'Form Manager', icon: <AssignmentIcon sx={{ color: 'black' }} />, component: <ManageFormsTab /> },
-  { label: 'Settings', icon: <SettingsIcon sx={{ color: 'black' }} />, component: <Typography variant="body1">⚙️ Settings</Typography> },
+  { label: 'Overview', icon: <DashboardIcon />, component: <OverviewTab /> },
+  { label: 'Account Management', icon: <PeopleIcon />, component: <ViewAccountsTab /> },
+  { label: 'Form Management', icon: <AssignmentIcon />, component: <FormTabs /> },
+  { label: 'Settings', icon: <SettingsIcon />, component: <Typography>Settings</Typography> },
 ];
 
 const DashboardOrgA = () => {
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   const navigate = useNavigate();
 
@@ -49,12 +48,8 @@ const DashboardOrgA = () => {
     }
 
     try {
-      const parsed = JSON.parse(storedSession);
-      const token = parsed?.access_token;
-
-      if (!token) {
-        navigate('/login/LogInOrgA');
-      }
+      const token = JSON.parse(storedSession)?.access_token;
+      if (!token) navigate('/login/LogInOrgA');
     } catch {
       navigate('/login/LogInOrgA');
     }
@@ -75,8 +70,8 @@ const DashboardOrgA = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      {/* Sidebar */}
+    <Box sx={{ display: 'flex', height: '100vh', overflowX: 'hidden' }}>
+
       <Drawer
         variant="permanent"
         sx={{
@@ -85,6 +80,10 @@ const DashboardOrgA = () => {
           [`& .MuiDrawer-paper`]: {
             width: drawerWidth,
             boxSizing: 'border-box',
+            backgroundColor: theme.palette.background.default,
+            borderRight: `1px solid ${theme.palette.divider}`,
+            display: 'flex',
+            flexDirection: 'column',
             pt: 2,
           },
         }}
@@ -92,32 +91,49 @@ const DashboardOrgA = () => {
         <Box sx={{ px: 2, py: 1 }}>
           <GovLogoOnly logoWidth={250} logoHeight={85} />
         </Box>
-        <List>
+
+        <List sx={{ flexGrow: 1 }}>
           {tabs.map((tab, index) => (
-            <ListItem key={tab.label} disablePadding>
+            <ListItem key={tab.label} disablePadding sx={{ mx: 1.5, borderRadius: '0.5rem' }}>
               <ListItemButton
                 selected={activeTab === index}
                 onClick={() => handleTabChange(index)}
                 sx={{
-                  '&.Mui-selected': {
-                    backgroundColor: '#facc15',
-                    color: '#000000ff',
-                    fontWeight: 'bold',
-                  },
-                  '&.Mui-selected:hover': {
-                    backgroundColor: '#fab115ff',
-                  },
+                  borderRadius: '0.5rem',
+                  px: 2,
+                  py: 1,
+                  transition: 'background-color 0.2s ease',
                   '&:hover': {
-                    backgroundColor: '#fab115ff',
+                    backgroundColor: '#f9c016ff', // 🍊 orange hover
+                  },
+                  '&.Mui-selected': {
+                    backgroundColor: theme.palette.primary.main,
+                    color: theme.palette.text.primary,
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: '#f9e616ff', // keep it orange even when selected
+                    },
                   },
                 }}
               >
-                <ListItemIcon sx={{ color: activeTab === index ? '#000000ff' : 'inherit' }}>
+                <ListItemIcon
+                  sx={{
+                    minWidth: 36,
+                    color: theme.palette.text.primary,
+                  }}
+                >
                   {tab.icon}
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Typography variant="body2" fontSize="1rem">
+                    <Typography
+                      variant="body2"
+                      fontSize="0.95rem"
+                      sx={{
+                        fontWeight: activeTab === index ? 600 : 500,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                       {tab.label}
                     </Typography>
                   }
@@ -126,14 +142,35 @@ const DashboardOrgA = () => {
             </ListItem>
           ))}
         </List>
-        <Box sx={{ mt: 'auto', p: 2 }}>
-          <Button onClick={handleLogout} fullWidth variant="outlined" size="small">
-            Log Out
-          </Button>
+
+        <Box sx={{ p: 2 }}>
+     <Button
+  onClick={handleLogout}
+  fullWidth
+  variant="contained"
+  size="small"
+  color="primary"
+  startIcon={<LogoutIcon fontSize="small" />}
+  sx={{
+    textTransform: 'none',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    borderRadius: '0.5rem', // 👈 match the tab buttons
+    color: theme.palette.text.primary,
+    '&:hover': {
+      backgroundColor: theme.palette.primary.light,
+    },
+    '&:active': {
+      transform: 'scale(0.97)',
+    },
+  }}
+>
+  Log Out
+</Button>
+
         </Box>
       </Drawer>
 
-      {/* Main Content */}
       <Box component="main" sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
         {tabs[activeTab]?.component || (
           <Typography variant="body1">😵 Unknown Tab</Typography>

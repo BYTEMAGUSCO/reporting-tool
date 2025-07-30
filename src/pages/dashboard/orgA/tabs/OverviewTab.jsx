@@ -98,27 +98,28 @@ const OverviewTab = () => {
         <Grid container spacing={3}>
           {news.map((item, index) => (
             <Grid item xs={12} md={6} key={index}>
-              <Card
+          <Card
+              sx={{
+                borderRadius: '0.5rem', // 🔄 was `3`
+                boxShadow: theme.shadows[3],
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <CardMedia
+                component="img"
+                image={item.image || placeholderImg}
+                alt={item.title}
                 sx={{
-                  borderRadius: 3,
-                  boxShadow: theme.shadows[3],
-                  height: '100%',
-                  display: 'flex',
-                  flexDirection: 'column',
+                  width: '100%',
+                  height: 200,
+                  objectFit: 'cover',
+                  borderTopLeftRadius: '0.5rem', // 🌀 changed
+                  borderTopRightRadius: '0.5rem', // 🌀 changed
                 }}
-              >
-                <CardMedia
-                  component="img"
-                  image={item.image || placeholderImg}
-                  alt={item.title}
-                  sx={{
-                    width: '100%',
-                    height: 200,
-                    objectFit: 'cover',
-                    borderTopLeftRadius: '12px',
-                    borderTopRightRadius: '12px',
-                  }}
-                />
+              />
+
                 <CardContent sx={{ flexGrow: 1 }}>
                   <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
                     {item.title}

@@ -66,23 +66,32 @@ const MainMenu = () => {
             Choose Department
           </Typography>
 
-          <Button
-            variant="contained"
-            fullWidth
-            onClick={() => navigate('/login/LogInOrgA')}
-            sx={{ maxWidth: 300 }}
-          >
-            Login as DILG
-          </Button>
+<Button
+  variant="contained"
+  fullWidth
+  onClick={() => navigate('/login/LogInOrgA')}
+  sx={{
+    maxWidth: 300,
+    borderRadius: '0.5rem', // 💅 added this
+    fontWeight: 'bold'
+  }}
+>
+  Login as DILG
+</Button>
 
-          <Button
-            variant="outlined"
-            fullWidth
-            onClick={() => navigate('/login/LogInOrgB')}
-            sx={{ maxWidth: 300 }}
-          >
-            Login as Barangay
-          </Button>
+<Button
+  variant="outlined"
+  fullWidth
+  onClick={() => navigate('/login/LogInOrgB')}
+  sx={{
+    maxWidth: 300,
+    borderRadius: '0.5rem', // 💅 added this too
+    fontWeight: 'bold'
+  }}
+>
+  Login as Barangay
+</Button>
+
         </Box>
       </Box>
     </Box>

@@ -39,7 +39,15 @@ const AccountsControlPanel = ({ filters, setFilters }) => {
   };
 
   return (
-    <Paper elevation={2} sx={{ mb: 2, p: 1.5, maxWidth: '100%' }}>
+    <Paper
+      elevation={2}
+      sx={{
+        mb: 2,
+        p: 1.5,
+        maxWidth: '100%',
+        borderRadius: '0.5rem',
+      }}
+    >
       <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1 }}>
         Filters
       </Typography>
@@ -66,18 +74,26 @@ const AccountsControlPanel = ({ filters, setFilters }) => {
                 <SearchIcon fontSize="small" />
               </InputAdornment>
             ),
+            sx: { borderRadius: '0.5rem' },
           }}
           fullWidth
+          sx={{ borderRadius: '0.5rem' }}
         />
 
         {dropdownConfigs.map(({ id, label, options }) => (
-          <FormControl key={id} fullWidth size="small">
+          <FormControl
+            key={id}
+            fullWidth
+            size="small"
+            sx={{ borderRadius: '0.5rem' }}
+          >
             <InputLabel id={`${id}-label`}>{label}</InputLabel>
             <Select
               labelId={`${id}-label`}
               value={filters[id]}
               onChange={handleChange(id)}
               label={label}
+              sx={{ borderRadius: '0.5rem' }}
             >
               {options.map(({ value, label }) => (
                 <MenuItem key={value} value={value}>

@@ -1,11 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Button, Box, IconButton } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Button,
+  CircularProgress,
+} from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+
 import approveUser from '@/services/approveUser';
 import denyRequest from '@/services/denyRequest';
+import {
+  showSuccessAlert,
+  showErrorAlert,
+  showConfirmAlert,
+} from '@/services/alert';
 
 const AccountActions = ({ account, onActionComplete }) => {
   const [token, setToken] = useState(null);
+  const [approving, setApproving] = useState(false);
+  const [denying, setDenying] = useState(false);
 
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
@@ -17,11 +32,15 @@ const AccountActions = ({ account, onActionComplete }) => {
   }, []);
 
   const handleApprove = async () => {
+    const confirmed = await showConfirmAlert(`Approve ${account.requester_name}?`);
+    if (!confirmed) return;
+
     if (!token) {
-      alert('No valid token found! Please log in again.');
+      showErrorAlert('No valid token found! Please log in again.');
       return;
     }
 
+    setApproving(true);
     const payload = {
       email: account.requester_email,
       password: account.requester_password,
@@ -31,46 +50,60 @@ const AccountActions = ({ account, onActionComplete }) => {
       token,
     };
 
-    console.log('📤 Approving user with payload:', payload);
+    try {
+      const result = await approveUser(
+        payload.email,
+        payload.password,
+        payload.phone,
+        payload.name,
+        payload.role,
+        payload.token
+      );
 
-    const result = await approveUser(
-      payload.email,
-      payload.password,
-      payload.phone,
-      payload.name,
-      payload.role,
-      payload.token
-    );
-
-    if (result.success) {
-      onActionComplete();
-    } else {
-      console.error('❌ Approval failed:', result.error);
-      alert('Failed to approve request: ' + result.error);
+      if (result.success) {
+        await showSuccessAlert(`${payload.name} has been approved.`);
+        onActionComplete();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      console.error('❌ Approval failed:', err.message);
+      showErrorAlert('Failed to approve request: ' + err.message);
+    } finally {
+      setApproving(false);
     }
   };
 
   const handleDeny = async () => {
+    const confirmed = await showConfirmAlert(`Reject ${account.requester_name}?`);
+    if (!confirmed) return;
+
     if (!token) {
-      alert('No valid token found! Please log in again.');
+      showErrorAlert('No valid token found! Please log in again.');
       return;
     }
 
+    setDenying(true);
     const payload = {
       email: account.requester_email,
       role: account.requester_role,
       token,
     };
 
-    console.log('📤 Denying user with payload:', payload);
+    try {
+      const result = await denyRequest(payload.email, payload.role, payload.token);
 
-    const result = await denyRequest(payload.email, payload.role, payload.token);
-
-    if (result.success) {
-      onActionComplete();
-    } else {
-      console.error('❌ Denial failed:', result.error);
-      alert('Failed to deny request: ' + result.error);
+      if (result.success) {
+        await showSuccessAlert(`${account.requester_name} has been rejected.`);
+        onActionComplete();
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (err) {
+      console.error('❌ Denial failed:', err.message);
+      showErrorAlert('Failed to reject request: ' + err.message);
+    } finally {
+      setDenying(false);
     }
   };
 
@@ -89,18 +122,37 @@ const AccountActions = ({ account, onActionComplete }) => {
         color="success"
         size="small"
         onClick={handleApprove}
-        sx={{ textTransform: 'none', fontSize: '0.7rem', px: 1.2, py: 0.3 }}
+        disabled={approving || denying}
+        sx={{
+          textTransform: 'none',
+          fontSize: '0.75rem',
+          px: 1.5,
+          py: 0.5,
+          borderRadius: '0.5rem',
+          borderWidth: 2,
+        }}
+        startIcon={!approving && <CheckCircleIcon fontSize="small" />}
       >
-        ✅ Approve
+        {approving ? <CircularProgress size={16} color="inherit" /> : 'Approve'}
       </Button>
+
       <Button
         variant="outlined"
         color="error"
         size="small"
         onClick={handleDeny}
-        sx={{ textTransform: 'none', fontSize: '0.7rem', px: 1.2, py: 0.3 }}
+        disabled={denying || approving}
+        sx={{
+          textTransform: 'none',
+          fontSize: '0.75rem',
+          px: 1.5,
+          py: 0.5,
+          borderRadius: '0.5rem',
+          borderWidth: 2,
+        }}
+        startIcon={!denying && <CancelIcon fontSize="small" />}
       >
-        ❌ Deny
+        {denying ? <CircularProgress size={16} color="inherit" /> : 'Reject'}
       </Button>
     </Box>
   );

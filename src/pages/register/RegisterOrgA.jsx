@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { TextField, Button, Typography, Box } from '@mui/material';
 import { AccountManager } from '@/services/AccountManager';
-import  GovHeader  from '../reusables/GovHeader';
-import Swal from 'sweetalert2';
-
+import GovHeader from '../reusables/GovHeader';
 import { useNavigate } from 'react-router-dom';
+import { showSuccessAlert, showErrorAlert } from '@/services/alert';
 
 const RegisterOrgA = () => {
   const accountManager = new AccountManager('orgA');
   const navigate = useNavigate();
-
 
   const [formData, setFormData] = useState({
     requester_name: '',
@@ -48,19 +46,7 @@ const RegisterOrgA = () => {
       const result = await accountManager.register(payload);
 
       if (result.success) {
-        Swal.fire({
-          icon: 'success',
-          title: 'Success! Now just wait for Approval 🎉',
-          text: result.message,
-          confirmButtonColor: '#facc15',
-          customClass: {
-            title: 'mui-font',
-            popup: 'mui-font',
-            confirmButton: 'mui-font',
-            htmlContainer: 'mui-font',
-          },
-        });
-
+        showSuccessAlert('Success! Now just wait for Approval 🎉', result.message);
         setFormData({
           requester_name: '',
           requester_email: '',
@@ -72,20 +58,12 @@ const RegisterOrgA = () => {
         if (result.validationErrors) {
           setErrors(result.validationErrors);
         } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Oops 😓',
-            text: result.message,
-          });
+          showErrorAlert('Oops 😓', result.message);
         }
       }
     } catch (err) {
       console.error('💥 Registration error:', err);
-      Swal.fire({
-        icon: 'error',
-        title: 'Something went wrong',
-        text: 'Try again later!',
-      });
+      showErrorAlert('Something went wrong', 'Try again later!');
     } finally {
       setIsLoading(false);
     }
@@ -103,7 +81,17 @@ const RegisterOrgA = () => {
         px: 2,
       }}
     >
-      <Box className="register-form" sx={{ width: '100%', maxWidth: 460 }}>
+      <Box
+        className="register-form"
+        sx={{
+          width: '100%',
+          maxWidth: 460,
+          borderRadius: '0.5rem',
+          padding: 3,
+          boxShadow: 2,
+          backgroundColor: '#fff',
+        }}
+      >
         <GovHeader />
         <Typography
           variant="h6"
@@ -126,6 +114,7 @@ const RegisterOrgA = () => {
             helperText={errors.requester_name}
             margin="dense"
             autoComplete="off"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Email Address"
@@ -139,6 +128,7 @@ const RegisterOrgA = () => {
             helperText={errors.requester_email}
             margin="dense"
             autoComplete="off"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Create Password"
@@ -152,7 +142,7 @@ const RegisterOrgA = () => {
             error={!!errors.requester_password}
             helperText={errors.requester_password}
             margin="dense"
-            
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Phone Number"
@@ -165,6 +155,7 @@ const RegisterOrgA = () => {
             error={!!errors.requester_phone}
             helperText={errors.requester_phone}
             margin="dense"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Role"
@@ -173,14 +164,19 @@ const RegisterOrgA = () => {
             disabled
             fullWidth
             margin="dense"
+            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
 
           <Button
             type="submit"
             variant="contained"
             fullWidth
-            sx={{ mt: 2 }}
             disabled={isLoading}
+            sx={{
+              mt: 2,
+              fontWeight: 'bold',
+              borderRadius: '0.5rem',
+            }}
           >
             {isLoading ? 'Submitting...' : 'Create Account'}
           </Button>
@@ -188,7 +184,12 @@ const RegisterOrgA = () => {
           <Typography
             variant="body2"
             align="center"
-            sx={{ mt: 2, cursor: 'pointer', color: '#6b7280', fontWeight: 500 }}
+            sx={{
+              mt: 2,
+              cursor: 'pointer',
+              color: '#6b7280',
+              fontWeight: 500,
+            }}
             onClick={() => navigate('/login/LogInOrgA')}
           >
             ← Back to Login

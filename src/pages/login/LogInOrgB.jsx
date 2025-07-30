@@ -51,7 +51,7 @@ const LogInOrgB = () => {
 
   return (
     <div className="generic-centered-container">
-      <div className="form-box">
+      <div className="form-box" style={{ borderRadius: '0.5rem', padding: '2rem' }}>
         <GovHeader logoWidth={350} logoHeight={200} titleSize="h5" />
 
         <Typography
@@ -73,6 +73,7 @@ const LogInOrgB = () => {
             required
             margin="dense"
             autoComplete="off"
+            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
           <TextField
             label="Password"
@@ -83,10 +84,14 @@ const LogInOrgB = () => {
             required
             margin="dense"
             autoComplete="off"
+            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
 
           {error && (
-            <Alert severity="error" style={{ marginTop: '1rem' }}>
+            <Alert
+              severity="error"
+              sx={{ marginTop: '1rem', borderRadius: '0.5rem' }}
+            >
               {error}
             </Alert>
           )}
@@ -95,8 +100,12 @@ const LogInOrgB = () => {
             type="submit"
             variant="contained"
             fullWidth
-            style={{ marginTop: '1rem' }}
             disabled={loading}
+            sx={{
+              mt: '1rem',
+              fontWeight: 'bold',
+              borderRadius: '0.5rem',
+            }}
           >
             {loading ? 'Logging in...' : 'Log In'}
           </Button>
@@ -125,7 +134,6 @@ const LogInOrgB = () => {
             Register Account →
           </Typography>
         </div>
-
       </div>
     </div>
   );
