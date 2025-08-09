@@ -21,10 +21,10 @@ const signUp = async () => {
   })
 
   if (error) {
-    console.error('❌ Sign-up failed:', error.message)
+    // console.error('❌ Sign-up failed:', error.message)
   } else {
-    console.log('✅ Sign-up successful!')
-    console.log('📦 Returned data:', data)
+    // console.log('✅ Sign-up successful!')
+    // console.log('📦 Returned data:', data)
   }
 }
 

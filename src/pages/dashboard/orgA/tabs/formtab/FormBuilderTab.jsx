@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { Box, TextField, Typography, Paper, Divider } from '@mui/material';
+import {
+  Box,
+  TextField,
+  Typography,
+  Paper,
+  Divider
+} from '@mui/material';
 import BuildIcon from '@mui/icons-material/Build';
 import { createClient } from '@supabase/supabase-js';
 
@@ -20,7 +26,7 @@ function getSessionToken() {
 
 const FormBuilderTab = () => {
   const [questions, setQuestions] = useState([]);
-  const [previewMode, setPreviewMode] = useState(false);
+  const [mode, setMode] = useState('edit'); // ← was previewMode
   const [formName, setFormName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -29,10 +35,11 @@ const FormBuilderTab = () => {
     setQuestions([...questions, newQ]);
   };
 
-  const deleteQuestion = (id) =>
+  const deleteQuestion = (id) => {
     setQuestions(questions.filter((q) => q.id !== id));
+  };
 
-  const updateQuestion = (id, key, value) =>
+  const updateQuestion = (id, key, value) => {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -43,20 +50,24 @@ const FormBuilderTab = () => {
         return q;
       })
     );
-
-  const addOption = (id) => {
-    const updated = questions.map((q) => {
-      if (q.id === id) {
-        const instance = FormQuestion.fromJSON(q);
-        instance.addOption();
-        return instance;
-      }
-      return q;
-    });
-    setQuestions(updated);
   };
 
-  const updateOption = (id, idx, value) =>
+  const addOption = (id) => {
+    // console.log('💡 addOption triggered for:', id);
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id) {
+          const instance = FormQuestion.fromJSON(q);
+          instance.addOption();
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+
+  const updateOption = (id, idx, value) => {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -67,8 +78,9 @@ const FormBuilderTab = () => {
         return q;
       })
     );
+  };
 
-  const removeOption = (id, index) =>
+  const removeOption = (id, index) => {
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -79,6 +91,7 @@ const FormBuilderTab = () => {
         return q;
       })
     );
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -92,7 +105,11 @@ const FormBuilderTab = () => {
     if (success) {
       setFormName('');
       setQuestions([]);
+      showSuccessAlert('Form saved successfully!');
+    } else {
+      showErrorAlert('Something went wrong while saving.');
     }
+
     setSaving(false);
   };
 
@@ -109,7 +126,7 @@ const FormBuilderTab = () => {
         </Typography>
       </Box>
 
-      {/* Top Form Controls */}
+      {/* Top Controls */}
       <Paper elevation={2} sx={{ borderRadius: 2, p: 2, mb: 0 }}>
         <TextField
           fullWidth
@@ -118,10 +135,11 @@ const FormBuilderTab = () => {
           onChange={(e) => setFormName(e.target.value)}
           sx={{ mb: 1 }}
         />
+
         <FormEditorControls
           onAddQuestion={addQuestion}
-          previewMode={previewMode}
-          setPreviewMode={setPreviewMode}
+          mode={mode}             // ⬅️ passed as string
+          setMode={setMode}       // ⬅️ string setter
           onSave={handleSave}
           saving={saving}
         />
@@ -129,7 +147,7 @@ const FormBuilderTab = () => {
 
       <Divider sx={{ mb: 0 }} />
 
-      {/* Main Form Preview Area */}
+      {/* Main Area */}
       <Box
         sx={{
           flexGrow: 1,
@@ -142,7 +160,7 @@ const FormBuilderTab = () => {
         <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
           <FormPreviewRenderer
             questions={questions}
-            previewMode={previewMode}
+            mode={mode}                     // ⬅️ key update here
             deleteQuestion={deleteQuestion}
             updateQuestion={updateQuestion}
             updateOption={updateOption}

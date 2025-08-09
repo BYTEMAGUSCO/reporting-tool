@@ -19,7 +19,7 @@ const denyRequest = async (requesterEmail, requesterRole, token) => {
 
     return { success: true };
   } catch (err) {
-    console.error(`❌ Error rejecting ${requesterEmail}:`, err.message);
+    // console.error(`❌ Error rejecting ${requesterEmail}:`, err.message);
     return { success: false, error: err.message };
   }
 };

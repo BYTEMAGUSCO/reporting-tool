@@ -11,17 +11,18 @@ import {
   Skeleton,
   Pagination,
   Divider,
-  Paper,
 } from '@mui/material';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
 import useApprovedAccounts from '@/services/useApprovedAccounts';
+import { getBarangays } from '@/services/BarangayService';
 
 const PAGE_LIMIT = 8;
 
 const ApprovedAccountsTab = () => {
   const token = JSON.parse(sessionStorage.getItem('session'))?.access_token;
   const [page, setPage] = useState(1);
+  const [barangays, setBarangays] = useState([]);
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -31,6 +32,24 @@ const ApprovedAccountsTab = () => {
   });
 
   const { data, loading, refetch } = useApprovedAccounts(token, page, PAGE_LIMIT);
+
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const result = await getBarangays(token);
+        setBarangays(result);
+        // console.log('[📍 Barangays]', result);
+      } catch (err) {
+        // console.error('Failed to load barangays', err);
+      }
+    };
+
+    fetchBarangays();
+  }, [token]);
+
+  const getBarangayName = (id) => {
+    return barangays.find((b) => b.id === id)?.name || 'Unknown';
+  };
 
   const filteredSortedAccounts = useMemo(() => {
     let allAccounts = data.data || [];
@@ -63,20 +82,14 @@ const ApprovedAccountsTab = () => {
 
   return (
     <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-        sx={{ borderRadius: '0.5rem' }}
-      >
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h5" fontWeight="bold">
           View Approved Accounts
         </Typography>
       </Box>
 
       <AccountsControlPanel filters={filters} setFilters={setFilters} />
-      <Divider sx={{ my: 2, borderRadius: '0.5rem' }} />
+      <Divider sx={{ my: 2 }} />
 
       <Box
         sx={{
@@ -86,17 +99,14 @@ const ApprovedAccountsTab = () => {
           borderRadius: '0.5rem',
         }}
       >
-        <Table
-          size="small"
-          stickyHeader
-          sx={{ minWidth: 900, borderRadius: '0.5rem' }}
-        >
+        <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
           <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
-            <TableRow sx={{ borderRadius: '0.5rem' }}>
+            <TableRow>
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Role</strong></TableCell>
               <TableCell><strong>Phone</strong></TableCell>
+              <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
@@ -122,11 +132,12 @@ const ApprovedAccountsTab = () => {
               </TableRow>
             ) : (
               filteredSortedAccounts.map((acc, i) => (
-                <TableRow key={i} hover sx={{ borderRadius: '0.5rem' }}>
+                <TableRow key={i} hover>
                   <TableCell>{acc.requester_name}</TableCell>
                   <TableCell>{acc.requester_email}</TableCell>
                   <TableCell>{acc.requester_role}</TableCell>
                   <TableCell>{acc.requester_phone}</TableCell>
+                  <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {new Date(acc.created_at).toLocaleDateString()}
                   </TableCell>
@@ -149,13 +160,12 @@ const ApprovedAccountsTab = () => {
         </Table>
       </Box>
 
-      <Box display="flex" justifyContent="center" mt={3} sx={{ borderRadius: '0.5rem' }}>
+      <Box display="flex" justifyContent="center" mt={3}>
         <Pagination
           count={data.totalPages}
           page={page}
           onChange={(_, value) => setPage(value)}
           color="primary"
-          sx={{ borderRadius: '0.5rem' }}
         />
       </Box>
     </Box>

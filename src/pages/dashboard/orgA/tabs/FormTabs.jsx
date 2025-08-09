@@ -10,9 +10,11 @@ import {
 
 import BuildIcon from '@mui/icons-material/Build';
 import DescriptionIcon from '@mui/icons-material/Description';
+import EditNoteIcon from '@mui/icons-material/EditNote';
 
 import FormBuilderTab from './formtab/FormBuilderTab';
 import ManageFormsTab from './formtab/ManageFormsTab';
+import FormFillerTab from './formtab/FormFillerTab'; // 🆕 import
 
 const FormTabs = () => {
   const [activeTab, setActiveTab] = useState(0);
@@ -46,6 +48,11 @@ const FormTabs = () => {
             iconPosition="start"
             label="Manage Forms"
           />
+          <Tab
+            icon={<EditNoteIcon />} // 🆕 lil pen for fillin' out vibes
+            iconPosition="start"
+            label="Fill Form"
+          />
         </Tabs>
       </Paper>
 
@@ -58,6 +65,12 @@ const FormTabs = () => {
       {activeTab === 1 && (
         <Box>
           <ManageFormsTab />
+        </Box>
+      )}
+
+      {activeTab === 2 && (
+        <Box>
+          <FormFillerTab />
         </Box>
       )}
     </Box>

@@ -40,7 +40,7 @@ const useCachedAccounts = ({type, fetcherFn}) => {
       setTotalPages(totalPages);
       setPage(targetPage);
     } catch (err) {
-      console.error(`❌ Error loading ${type} accounts:`, err.message);
+      // console.error(`❌ Error loading ${type} accounts:`, err.message);
     } finally {
       setIsLoading(false);
     }

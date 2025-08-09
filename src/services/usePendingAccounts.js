@@ -49,7 +49,7 @@ export default function usePendingAccounts(token, page, limit) {
           table: 'registration_requests',
         },
         (payload) => {
-          console.log('Realtime change:', payload);
+          // console.log('Realtime change:', payload);
 
           setData((prev) => {
             let updated = [...prev.data];

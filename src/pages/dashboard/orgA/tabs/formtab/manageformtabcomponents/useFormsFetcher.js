@@ -30,7 +30,7 @@ const useFormsFetcher = (page) => {
       setForms(result.data || []);
       setTotalPages(result.pagination?.totalPages || 1);
     } catch (err) {
-      console.error('❌ Fetch error:', err);
+      // console.error('❌ Fetch error:', err);
       showErrorAlert('Failed to load forms.');
     } finally {
       setLoading(false);

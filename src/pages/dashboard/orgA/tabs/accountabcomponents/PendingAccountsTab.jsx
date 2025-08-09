@@ -15,6 +15,7 @@ import {
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
 import usePendingAccounts from '@/services/usePendingAccounts';
+import { getBarangays } from '@/services/BarangayService';
 import AccountActions from '../components/AccountActions';
 
 const PAGE_LIMIT = 8;
@@ -22,6 +23,8 @@ const PAGE_LIMIT = 8;
 const PendingAccountsTab = () => {
   const token = JSON.parse(sessionStorage.getItem('session'))?.access_token;
   const [page, setPage] = useState(1);
+
+  const [barangays, setBarangays] = useState([]);
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -31,6 +34,32 @@ const PendingAccountsTab = () => {
   });
 
   const { data, loading, refetch } = usePendingAccounts(token, page, PAGE_LIMIT);
+
+  // Fetch barangays on mount
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const result = await getBarangays(token);
+        setBarangays(result);
+        // console.log('[📍 Barangays]', result);
+      } catch (err) {
+        // console.error('Failed to load barangays', err);
+      }
+    };
+
+    fetchBarangays();
+  }, [token]);
+
+  // Debug data
+  useEffect(() => {
+    if (data) {
+      // console.log('[🔥 Fetched DB Data]:', data);
+    }
+  }, [data]);
+
+  const getBarangayName = (id) => {
+    return barangays.find((b) => b.id === id)?.name || 'Unknown';
+  };
 
   const filteredSortedAccounts = useMemo(() => {
     let allAccounts = (data.data || []).filter((acc) => acc.request_status === 'P');
@@ -92,7 +121,7 @@ const PendingAccountsTab = () => {
         <Table
           size="small"
           stickyHeader
-          sx={{ minWidth: 900, borderRadius: '0.5rem' }}
+          sx={{ minWidth: 1000, borderRadius: '0.5rem' }}
         >
           <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
             <TableRow sx={{ borderRadius: '0.5rem' }}>
@@ -100,6 +129,7 @@ const PendingAccountsTab = () => {
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Role</strong></TableCell>
               <TableCell><strong>Phone</strong></TableCell>
+              <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
               <TableCell align="right"><strong>Action</strong></TableCell>
@@ -109,7 +139,7 @@ const PendingAccountsTab = () => {
             {loading ? (
               Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array(7).fill().map((_, j) => (
+                  {Array(8).fill().map((_, j) => (
                     <TableCell key={j} sx={{ py: 0.5 }}>
                       <Skeleton variant="text" height={20} />
                     </TableCell>
@@ -118,7 +148,7 @@ const PendingAccountsTab = () => {
               ))
             ) : filteredSortedAccounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
                     No pending accounts found.
                   </Typography>
@@ -131,6 +161,7 @@ const PendingAccountsTab = () => {
                   <TableCell>{acc.requester_email}</TableCell>
                   <TableCell>{acc.requester_role}</TableCell>
                   <TableCell>{acc.requester_phone}</TableCell>
+                  <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {new Date(acc.created_at).toLocaleDateString()}
                   </TableCell>

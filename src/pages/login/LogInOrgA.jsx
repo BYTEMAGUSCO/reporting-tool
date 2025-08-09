@@ -30,21 +30,23 @@ const LogInOrgA = () => {
 
         setError(userFriendlyMessage);
 
+        /*
         console.warn('🪵 Login Debug Info:', {
           code: result.code || 'N/A',
           status: result.status || 'N/A',
           raw: result.raw || null,
         });
+        */
 
         return;
       }
 
-      console.log('🚀 Navigating to dashboard...');
+      // console.log('🚀 Navigating to dashboard...');
       navigate('/dashboard/orgA/DashboardOrgA');
     } catch (err) {
       setLoading(false);
       setError('Something went really wrong 💀 Please try again.');
-      console.error('🔥 Unexpected login error:', err);
+      // console.error('🔥 Unexpected login error:', err);
     }
   };
 
@@ -72,7 +74,10 @@ const LogInOrgA = () => {
             required
             margin="dense"
             autoComplete="off"
-            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            sx={{
+              borderRadius: '0.5rem',
+              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' }
+            }}
           />
           <TextField
             label="Password"
@@ -83,7 +88,10 @@ const LogInOrgA = () => {
             required
             margin="dense"
             autoComplete="off"
-            sx={{ borderRadius: '0.5rem', '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            sx={{
+              borderRadius: '0.5rem',
+              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' }
+            }}
           />
 
           {error && (

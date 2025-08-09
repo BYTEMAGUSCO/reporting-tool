@@ -21,7 +21,7 @@ const usePreviewHandler = () => {
       setSelectedForm({ raw: form.form_content, parsed });
       setPreviewOpen(true);
     } catch (err) {
-      console.error('❌ Preview error:', err);
+      // console.error('❌ Preview error:', err);
       showErrorAlert('This form is corrupted and cannot be previewed 😢');
     }
   };

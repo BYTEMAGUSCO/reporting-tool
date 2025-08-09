@@ -45,6 +45,10 @@ export class AccountManager {
       errors.requester_role = "Role is required";
     }
 
+    if (!formData.requester_barangay) {
+      errors.requester_barangay = "Barangay is required";
+    }
+
     return {
       isValid: Object.keys(errors).length === 0,
       errors,
@@ -82,6 +86,8 @@ export class AccountManager {
         return {
           success: false,
           message: result.message || "Something went wrong ❌",
+          status: response.status,
+          error: result.error || null,
         };
       }
 
@@ -90,7 +96,7 @@ export class AccountManager {
         message: result.message || "Registration request sent ✅",
       };
     } catch (err) {
-      console.error(`🌐 Network error (${this.maxRetries - retriesLeft + 1} attempt):`, err);
+      // console.error(`🌐 Network error (${this.maxRetries - retriesLeft + 1} attempt):`, err);
       if (retriesLeft > 0) {
         return this.tryRegister(payload, retriesLeft - 1);
       }
@@ -102,7 +108,7 @@ export class AccountManager {
     }
   }
 
-async login(email, password) {
+ async login(email, password) {
   try {
     const response = await fetch(this.loginUrl, {
       method: "POST",
@@ -118,11 +124,32 @@ async login(email, password) {
     try {
       result = JSON.parse(rawText);
     } catch (err) {
-      console.error("❌ Failed to parse JSON:", err);
+      // console.error("❌ Failed to parse JSON:", err);
       return {
         success: false,
         message: "Invalid server response 💀",
       };
+    }
+
+    // If server threw a 500 error, sign out with token
+    if (response.status === 500) {
+      // console.warn("⚠️ 500 error detected — calling sign-out endpoint...");
+      try {
+        const token = JSON.parse(sessionStorage.getItem("session"))?.access_token;
+        if (token) {
+          await fetch("https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/sign-out", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          });
+        }
+      } catch (signOutErr) {
+        // console.error("[Logout Error]", signOutErr);
+      } finally {
+        sessionStorage.clear();
+      }
     }
 
     if (!response.ok || result?.error) {
@@ -153,7 +180,7 @@ async login(email, password) {
       message: "Logged in successfully ✅",
     };
   } catch (err) {
-    console.error("💥 Login network/unexpected error:", err);
+    // console.error("💥 Login network/unexpected error:", err);
     return {
       success: false,
       message: "Network error 💥",

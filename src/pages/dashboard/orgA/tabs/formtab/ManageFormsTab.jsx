@@ -15,6 +15,7 @@ import SkeletonList from './manageformtabcomponents/SkeletonList';
 import useFormsFetcher from './manageformtabcomponents/useFormsFetcher';
 import usePreviewHandler from './manageformtabcomponents/usePreviewHandler';
 import useDeleteHandler from './manageformtabcomponents/useDeleteHandler';
+import useVisibilityToggle from './manageformtabcomponents/useVisibilityToggle';
 
 const ManageFormsTab = () => {
   const [page, setPage] = useState(1);
@@ -36,6 +37,8 @@ const ManageFormsTab = () => {
   } = usePreviewHandler();
 
   const handleDelete = useDeleteHandler(fetchForms, setDeletingFormId);
+
+  const toggleVisibility = useVisibilityToggle(fetchForms);
 
   useEffect(() => {
     fetchForms();
@@ -60,6 +63,7 @@ const ManageFormsTab = () => {
             forms={forms}
             onPreview={handlePreview}
             onDelete={handleDelete}
+            onToggleVisibility={toggleVisibility} // 🔥 Pass this
             deletingFormId={deletingFormId}
           />
         )}

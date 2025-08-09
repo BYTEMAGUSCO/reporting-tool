@@ -15,8 +15,10 @@ const QuestionEditor = ({
   updateQuestion,
   updateOption,
   addOption,
-  removeOption, // 👈 new prop
+  removeOption,
 }) => {
+  const options = q.options || []; // 👈 prevent undefined errors
+
   return (
     <>
       <TextField
@@ -47,7 +49,7 @@ const QuestionEditor = ({
 
       {['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && (
         <Box mt={2}>
-          {q.options.map((opt, idx) => (
+          {options.map((opt, idx) => (
             <Box key={idx} display="flex" alignItems="center" gap={1} mb={1}>
               <TextField
                 fullWidth

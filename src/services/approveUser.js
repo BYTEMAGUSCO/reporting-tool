@@ -1,4 +1,12 @@
-const approveUser = async (requesterEmail, requesterPassword, requesterPhone, requesterName, requesterRole, token) => {
+const approveUser = async (
+  requesterEmail,
+  requesterPassword,
+  requesterPhone,
+  requesterName,
+  requesterRole,
+  requesterBarangay, // 🔥 new param
+  token
+) => {
   try {
     const res = await fetch(
       'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/add-user',
@@ -14,6 +22,7 @@ const approveUser = async (requesterEmail, requesterPassword, requesterPhone, re
           requester_phone: requesterPhone,
           requester_name: requesterName,
           requester_role: requesterRole,
+          requester_barangay: requesterBarangay, // 💅 added this
         }),
       }
     );
@@ -22,7 +31,7 @@ const approveUser = async (requesterEmail, requesterPassword, requesterPhone, re
 
     return { success: true };
   } catch (err) {
-    console.error(`❌ Error approving ${requesterEmail}:`, err.message);
+    // console.error(`❌ Error approving ${requesterEmail}:`, err.message);
     return { success: false, error: err.message };
   }
 };

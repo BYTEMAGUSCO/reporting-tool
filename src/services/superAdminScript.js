@@ -18,9 +18,9 @@ const createSuperAdmin = async () => {
   });
 
   if (error) {
-    console.error('❌ Failed to create Super Admin:', error.message);
+    // console.error('❌ Failed to create Super Admin:', error.message);
   } else {
-    console.log('✅ Super Admin created:', data.user.email);
+    // console.log('✅ Super Admin created:', data.user.email);
   }
 };
 

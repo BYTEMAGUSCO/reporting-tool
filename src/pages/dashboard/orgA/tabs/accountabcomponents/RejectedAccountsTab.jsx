@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Typography,
   Table,
@@ -11,12 +11,11 @@ import {
   Skeleton,
   Pagination,
   Divider,
-  Paper,
 } from '@mui/material';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
 import useRejectedAccounts from '@/services/useRejectedAccounts';
-import AccountActions from '../components/AccountActions';
+import { getBarangays } from '@/services/BarangayService'; // 👈 make sure this path is correct
 
 const PAGE_LIMIT = 8;
 
@@ -31,7 +30,26 @@ const RejectedAccountsTab = () => {
     sortBy: 'name',
   });
 
-  const { data = {}, loading, refetch } = useRejectedAccounts(token, page, PAGE_LIMIT);
+  const { data = {}, loading } = useRejectedAccounts(token, page, PAGE_LIMIT);
+  const [barangays, setBarangays] = useState([]);
+
+  // 🧠 Fetch barangays when component mounts
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const result = await getBarangays(token);
+        setBarangays(result || []);
+      } catch (err) {
+        // console.error('Barangay fetch failed 💀', err);
+      }
+    };
+
+    fetchBarangays();
+  }, [token]);
+
+  const getBarangayName = (id) => {
+    return barangays.find((b) => b.id === id)?.name || 'Unknown';
+  };
 
   const filteredSortedAccounts = useMemo(() => {
     let allAccounts = data.data || [];
@@ -88,7 +106,7 @@ const RejectedAccountsTab = () => {
           size="small"
           stickyHeader
           sx={{
-            minWidth: 900,
+            minWidth: 1100,
             borderRadius: '0.5rem',
             '& thead': {
               backgroundColor: '#f5f7fa',
@@ -107,6 +125,7 @@ const RejectedAccountsTab = () => {
               <TableCell><strong>Email</strong></TableCell>
               <TableCell><strong>Role</strong></TableCell>
               <TableCell><strong>Phone</strong></TableCell>
+              <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
@@ -137,6 +156,7 @@ const RejectedAccountsTab = () => {
                   <TableCell>{acc.requester_email}</TableCell>
                   <TableCell>{acc.requester_role}</TableCell>
                   <TableCell>{acc.requester_phone}</TableCell>
+                  <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {new Date(acc.created_at).toLocaleDateString()}
                   </TableCell>

@@ -4,30 +4,44 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import SaveIcon from '@mui/icons-material/Save';
 
-const FormEditorControls = ({ onAddQuestion, previewMode, setPreviewMode, onSave, saving }) => {
+const FormEditorControls = ({
+  onAddQuestion,
+  mode,            // 'edit' | 'preview'
+  setMode,         // setter for mode string
+  onSave,
+  saving,
+}) => {
+  const toggleMode = () => {
+    setMode((prev) => (prev === 'edit' ? 'preview' : 'edit'));
+  };
+
+  const isPreview = mode === 'preview';
+
   return (
     <Box display="flex" gap={2} mb={2}>
-      <Button
-        variant="outlined"
-        onClick={onAddQuestion}
-        startIcon={<AddIcon />}
-        sx={{
-          borderRadius: '0.5rem',
-          px: 2,
-          py: 1,
-          textTransform: 'none',
-          '&:hover': {
-            backgroundColor: '#f97316',
-          },
-        }}
-      >
-        Add Question
-      </Button>
+      {!isPreview && (
+        <Button
+          variant="outlined"
+          onClick={onAddQuestion}
+          startIcon={<AddIcon />}
+          sx={{
+            borderRadius: '0.5rem',
+            px: 2,
+            py: 1,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: '#f97316',
+            },
+          }}
+        >
+          Add Question
+        </Button>
+      )}
 
       <Button
         variant="outlined"
-        onClick={() => setPreviewMode(!previewMode)}
-        startIcon={previewMode ? <EditNoteIcon /> : <VisibilityIcon />}
+        onClick={toggleMode}
+        startIcon={isPreview ? <EditNoteIcon /> : <VisibilityIcon />}
         sx={{
           borderRadius: '0.5rem',
           px: 2,
@@ -38,33 +52,35 @@ const FormEditorControls = ({ onAddQuestion, previewMode, setPreviewMode, onSave
           },
         }}
       >
-        {previewMode ? 'Edit Mode' : 'Preview Mode'}
+        {isPreview ? 'Switch to Edit' : 'Switch to Preview'}
       </Button>
 
-      <Button
-        variant="outlined"
-        onClick={onSave}
-        disabled={saving}
-        startIcon={
-          saving ? (
-            <CircularProgress size={16} color="inherit" />
-          ) : (
-            <SaveIcon />
-          )
-        }
-        color={saving ? 'secondary' : 'primary'}
-        sx={{
-          borderRadius: '0.5rem',
-          px: 2,
-          py: 1,
-          textTransform: 'none',
-          '&:hover': {
-            backgroundColor: '#f97316',
-          },
-        }}
-      >
-        {saving ? 'Saving...' : 'Save to Supabase'}
-      </Button>
+      {!isPreview && (
+        <Button
+          variant="outlined"
+          onClick={onSave}
+          disabled={saving}
+          startIcon={
+            saving ? (
+              <CircularProgress size={16} color="inherit" />
+            ) : (
+              <SaveIcon />
+            )
+          }
+          color={saving ? 'secondary' : 'primary'}
+          sx={{
+            borderRadius: '0.5rem',
+            px: 2,
+            py: 1,
+            textTransform: 'none',
+            '&:hover': {
+              backgroundColor: '#f97316',
+            },
+          }}
+        >
+          {saving ? 'Saving...' : 'Save to Supabase'}
+        </Button>
+      )}
     </Box>
   );
 };

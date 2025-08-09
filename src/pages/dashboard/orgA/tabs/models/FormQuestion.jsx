@@ -43,7 +43,7 @@ class FormQuestion {
       label: this.label,
       type: this.type,
       options: this.options,
-      config: this.config,
+      config: this.config,  
     };
   }
 
@@ -52,7 +52,7 @@ class FormQuestion {
     instance.id = data.id || uuid();
     instance.label = data.label || '';
     instance.type = data.type || 'text';
-    instance.options = Array.isArray(data.options) ? data.options : [];
+    instance.options = Array.isArray(data.options) ? [...data.options] : [];
     instance.config = data.config || {};
     return instance;
   }

@@ -9,6 +9,7 @@ import {
   ListItemText,
   Typography,
   Button,
+  CircularProgress,
   useTheme,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +25,13 @@ import ViewAccountsTab from './tabs/ViewAccountsTab';
 import GovLogoOnly from './../../reusables/GovLogoOnly';
 import FormTabs from './tabs/FormTabs';
 
+import {
+  signOutUser,
+  setupSessionPing,
+  setupTabCloseLogout,
+  getStoredToken,
+} from '@/services/SessionManager';
+
 const drawerWidth = 260;
 
 const tabs = [
@@ -36,8 +44,22 @@ const tabs = [
 const DashboardOrgA = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
+  // 🔥 Session ping every 5 minutes
+  useEffect(() => {
+    const interval = setupSessionPing(navigate);
+    return () => clearInterval(interval);
+  }, [navigate]);
+
+  // 💀 Sign out on tab close
+  useEffect(() => {
+    const cleanup = setupTabCloseLogout();
+    return cleanup;
+  }, []);
+
+  // 🚪 Startup check
   useEffect(() => {
     const storedSession = sessionStorage.getItem('session');
     const storedIndex = sessionStorage.getItem('activeTab');
@@ -48,7 +70,7 @@ const DashboardOrgA = () => {
     }
 
     try {
-      const token = JSON.parse(storedSession)?.access_token;
+      const token = getStoredToken();
       if (!token) navigate('/login/LogInOrgA');
     } catch {
       navigate('/login/LogInOrgA');
@@ -64,14 +86,14 @@ const DashboardOrgA = () => {
     sessionStorage.setItem('activeTab', index.toString());
   };
 
-  const handleLogout = () => {
-    sessionStorage.clear();
-    navigate('/login/LogInOrgA');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    await signOutUser(navigate);
+    setIsLoggingOut(false);
   };
 
   return (
     <Box sx={{ display: 'flex', height: '100vh', overflowX: 'hidden' }}>
-
       <Drawer
         variant="permanent"
         sx={{
@@ -104,14 +126,14 @@ const DashboardOrgA = () => {
                   py: 1,
                   transition: 'background-color 0.2s ease',
                   '&:hover': {
-                    backgroundColor: '#f9c016ff', // 🍊 orange hover
+                    backgroundColor: '#f9c016ff',
                   },
                   '&.Mui-selected': {
                     backgroundColor: theme.palette.primary.main,
                     color: theme.palette.text.primary,
                     fontWeight: 600,
                     '&:hover': {
-                      backgroundColor: '#f9e616ff', // keep it orange even when selected
+                      backgroundColor: '#f9e616ff',
                     },
                   },
                 }}
@@ -144,30 +166,36 @@ const DashboardOrgA = () => {
         </List>
 
         <Box sx={{ p: 2 }}>
-     <Button
-  onClick={handleLogout}
-  fullWidth
-  variant="contained"
-  size="small"
-  color="primary"
-  startIcon={<LogoutIcon fontSize="small" />}
-  sx={{
-    textTransform: 'none',
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    borderRadius: '0.5rem', // 👈 match the tab buttons
-    color: theme.palette.text.primary,
-    '&:hover': {
-      backgroundColor: theme.palette.primary.light,
-    },
-    '&:active': {
-      transform: 'scale(0.97)',
-    },
-  }}
->
-  Log Out
-</Button>
-
+          <Button
+            onClick={handleLogout}
+            fullWidth
+            variant="contained"
+            size="small"
+            color="primary"
+            startIcon={
+              isLoggingOut ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                <LogoutIcon fontSize="small" />
+              )
+            }
+            disabled={isLoggingOut}
+            sx={{
+              textTransform: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              borderRadius: '0.5rem',
+              color: theme.palette.text.primary,
+              '&:hover': {
+                backgroundColor: theme.palette.primary.light,
+              },
+              '&:active': {
+                transform: 'scale(0.97)',
+              },
+            }}
+          >
+            {isLoggingOut ? 'Logging out...' : 'Log Out'}
+          </Button>
         </Box>
       </Drawer>
 

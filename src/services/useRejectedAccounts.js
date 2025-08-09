@@ -49,7 +49,7 @@ export default function useApprovedAccounts(token, page, limit) {
           table: 'registration_requests',
         },
         (payload) => {
-          console.log('Realtime change (approved):', payload);
+          // console.log('Realtime change (approved):', payload);
 
           setData((prev) => {
             let updated = [...prev.data];

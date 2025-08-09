@@ -27,7 +27,7 @@ const AccountActions = ({ account, onActionComplete }) => {
     if (session?.access_token) {
       setToken(session.access_token);
     } else {
-      console.warn('🛑 No session token found!');
+      // console.warn('🛑 No session token found!');
     }
   }, []);
 
@@ -47,6 +47,7 @@ const AccountActions = ({ account, onActionComplete }) => {
       phone: account.requester_phone,
       name: account.requester_name,
       role: account.requester_role,
+      barangay: account.requester_barangay, // 🆕 NEW: include barangay
       token,
     };
 
@@ -57,6 +58,7 @@ const AccountActions = ({ account, onActionComplete }) => {
         payload.phone,
         payload.name,
         payload.role,
+        payload.barangay, // 🆕 pass barangay here
         payload.token
       );
 
@@ -67,7 +69,7 @@ const AccountActions = ({ account, onActionComplete }) => {
         throw new Error(result.error);
       }
     } catch (err) {
-      console.error('❌ Approval failed:', err.message);
+      // console.error('❌ Approval failed:', err.message);
       showErrorAlert('Failed to approve request: ' + err.message);
     } finally {
       setApproving(false);
@@ -100,7 +102,7 @@ const AccountActions = ({ account, onActionComplete }) => {
         throw new Error(result.error);
       }
     } catch (err) {
-      console.error('❌ Denial failed:', err.message);
+      // console.error('❌ Denial failed:', err.message);
       showErrorAlert('Failed to reject request: ' + err.message);
     } finally {
       setDenying(false);

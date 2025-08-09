@@ -26,26 +26,29 @@ const LogInOrgB = () => {
         const userFriendlyMessage =
           result.message === 'Invalid login credentials'
             ? 'Incorrect email or password. Try again!'
-            : result.message || 'Login failed 🥲';
+            : result.message || 'Login failed';
 
         setError(userFriendlyMessage);
 
-        console.warn("🪵 Login Debug Info:", {
+        // Debug info (commented out to avoid breaking code)
+        /*
+        console.warn("Login Debug Info:", {
           code: result.code || 'N/A',
           status: result.status || 'N/A',
           raw: result.raw || null,
         });
+        */
 
         return;
       }
 
-      console.log('🚀 Navigating to Org B dashboard...');
+      // console.log('Navigating to Org B dashboard...');
       navigate('/dashboard/orgB/DashboardOrgB');
 
     } catch (err) {
       setLoading(false);
-      setError('Something went really wrong 💀 Please try again.');
-      console.error("🔥 Unexpected login error:", err);
+      setError('Something went really wrong. Please try again.');
+      // console.error("Unexpected login error:", err);
     }
   };
 
@@ -129,7 +132,7 @@ const LogInOrgB = () => {
           <Typography
             variant="body2"
             sx={{ cursor: 'pointer', color: '#6b7280', fontWeight: 500 }}
-            onClick={() => navigate('/register/RegisterOrgA')}
+            onClick={() => navigate('/register/RegisterOrgB')}
           >
             Register Account →
           </Typography>

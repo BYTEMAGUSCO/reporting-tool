@@ -24,6 +24,7 @@ export async function handleSaveLayout(formName, questions, token, supabaseUrl) 
   const payload = {
     form_name: formName,
     form_content: layout,
+    is_visible: 'N', // 👀 stealth mode activated
   };
 
   try {
@@ -40,11 +41,11 @@ export async function handleSaveLayout(formName, questions, token, supabaseUrl) 
 
     if (!response.ok) throw new Error(result?.error?.message || 'Failed to save form');
 
-    showSuccessAlert('Form saved successfully!');
-    console.log('✅ Server response:', result);
+    showSuccessAlert('Form saved successfully, make it visible in the manage forms tab');
+    // console.log('✅ Server response:', result);
     return true;
   } catch (err) {
-    console.error('🧨 Error saving form:', err);
+    // console.error('🧨 Error saving form:', err);
     showErrorAlert('Error saving form: ' + err.message);
     return false;
   }

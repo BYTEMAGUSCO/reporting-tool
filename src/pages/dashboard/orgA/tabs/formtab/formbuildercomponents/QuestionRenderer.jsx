@@ -7,9 +7,37 @@ import {
   FormControlLabel,
   Checkbox,
   Typography,
+  Radio,
+  RadioGroup,
 } from '@mui/material';
 
-const QuestionRenderer = ({ q }) => {
+const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
+  const isDisabled = mode !== 'submit';
+
+  const handleChange = (e) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [q.id]: e.target.value,
+    }));
+  };
+
+  const handleCheckboxChange = (opt) => {
+    setAnswers((prev) => {
+      const current = prev?.[q.id] ?? [];
+      const newVal = current.includes(opt)
+        ? current.filter((o) => o !== opt)
+        : [...current, opt];
+      return { ...prev, [q.id]: newVal };
+    });
+  };
+
+  const handleRadioChange = (e) => {
+    setAnswers((prev) => ({
+      ...prev,
+      [q.id]: e.target.value,
+    }));
+  };
+
   return (
     <Box
       mt={4}
@@ -26,7 +54,9 @@ const QuestionRenderer = ({ q }) => {
           fullWidth
           placeholder="Your answer"
           variant="standard"
-          disabled
+          disabled={isDisabled}
+          value={answers?.[q.id] ?? ''}
+          onChange={handleChange}
         />
       )}
 
@@ -37,7 +67,9 @@ const QuestionRenderer = ({ q }) => {
           rows={4}
           placeholder="Your answer"
           variant="standard"
-          disabled
+          disabled={isDisabled}
+          value={answers?.[q.id] ?? ''}
+          onChange={handleChange}
         />
       )}
 
@@ -47,7 +79,9 @@ const QuestionRenderer = ({ q }) => {
           type="number"
           placeholder="Enter a number"
           variant="standard"
-          disabled
+          disabled={isDisabled}
+          value={answers?.[q.id] ?? ''}
+          onChange={handleChange}
         />
       )}
 
@@ -57,7 +91,9 @@ const QuestionRenderer = ({ q }) => {
           type="email"
           placeholder="email@example.com"
           variant="standard"
-          disabled
+          disabled={isDisabled}
+          value={answers?.[q.id] ?? ''}
+          onChange={handleChange}
         />
       )}
 
@@ -66,14 +102,19 @@ const QuestionRenderer = ({ q }) => {
           fullWidth
           type="date"
           variant="standard"
-          disabled
+          disabled={isDisabled}
+          value={answers?.[q.id] ?? ''}
+          onChange={handleChange}
           InputLabelProps={{ shrink: true }}
         />
       )}
 
       {q.type === 'dropdown' && (
-        <FormControl fullWidth variant="standard" disabled>
-          <Select defaultValue="">
+        <FormControl fullWidth variant="standard" disabled={isDisabled}>
+          <Select
+            value={answers?.[q.id] ?? ''}
+            onChange={handleChange}
+          >
             {q.options.map((opt, i) => (
               <MenuItem key={i} value={opt}>
                 {opt}
@@ -88,7 +129,13 @@ const QuestionRenderer = ({ q }) => {
           {q.options.map((opt, i) => (
             <FormControlLabel
               key={i}
-              control={<Checkbox disabled />}
+              control={
+                <Checkbox
+                  disabled={isDisabled}
+                  checked={(answers?.[q.id] ?? []).includes(opt)}
+                  onChange={() => handleCheckboxChange(opt)}
+                />
+              }
               label={opt}
               sx={{ mb: 0.5 }}
             />
@@ -97,16 +144,23 @@ const QuestionRenderer = ({ q }) => {
       )}
 
       {q.type === 'multiple_choice' && (
-        <Box display="flex" flexDirection="column" mt={1}>
-          {q.options.map((opt, i) => (
-            <FormControlLabel
-              key={i}
-              control={<input type="radio" disabled name={q.id} />}
-              label={opt}
-              sx={{ mb: 0.5 }}
-            />
-          ))}
-        </Box>
+        <FormControl component="fieldset" disabled={isDisabled}>
+          <RadioGroup
+            name={q.id}
+            value={answers?.[q.id] ?? ''}
+            onChange={handleRadioChange}
+          >
+            {q.options.map((opt, i) => (
+              <FormControlLabel
+                key={i}
+                value={opt}
+                control={<Radio />}
+                label={opt}
+                sx={{ mb: 0.5 }}
+              />
+            ))}
+          </RadioGroup>
+        </FormControl>
       )}
     </Box>
   );

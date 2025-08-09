@@ -1,5 +1,14 @@
-import { useState } from 'react';
-import { TextField, Button, Typography, Box } from '@mui/material';
+import { useState, useEffect } from 'react';
+import {
+  TextField,
+  Button,
+  Typography,
+  Box,
+  Select,
+  MenuItem,
+  InputLabel,
+  FormControl,
+} from '@mui/material';
 import { AccountManager } from '@/services/AccountManager';
 import GovHeader from '../reusables/GovHeader';
 import { useNavigate } from 'react-router-dom';
@@ -14,10 +23,27 @@ const RegisterOrgB = () => {
     requester_email: '',
     requester_password: '',
     requester_phone: '',
+    requester_barangay: '',
+    country_code: '+63',
   });
 
+  const [barangays, setBarangays] = useState([]);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const res = await fetch('https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/barangays');
+        const data = await res.json();
+        setBarangays(data);
+      } catch (err) {
+        // console.error('Failed to load barangays:', err);
+        showErrorAlert('Barangay load fail 🥲', 'Try reloading the page!');
+      }
+    };
+    fetchBarangays();
+  }, []);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -37,9 +63,12 @@ const RegisterOrgB = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    const fullPhone = `${formData.country_code}${formData.requester_phone}`;
+
     const payload = {
       ...formData,
       requester_role: 'B',
+      requester_phone: fullPhone,
     };
 
     try {
@@ -47,12 +76,13 @@ const RegisterOrgB = () => {
 
       if (result.success) {
         showSuccessAlert('Success! Now just wait for Approval 🎉', result.message);
-
         setFormData({
           requester_name: '',
           requester_email: '',
           requester_password: '',
           requester_phone: '',
+          requester_barangay: '',
+          country_code: '+63',
         });
         setErrors({});
       } else {
@@ -63,7 +93,7 @@ const RegisterOrgB = () => {
         }
       }
     } catch (err) {
-      console.error('💥 Registration error:', err);
+      // console.error('💥 Registration error:', err);
       showErrorAlert('Something went wrong', 'Try again later!');
     } finally {
       setIsLoading(false);
@@ -117,6 +147,7 @@ const RegisterOrgB = () => {
             autoComplete="off"
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
+
           <TextField
             label="Email Address"
             name="requester_email"
@@ -131,6 +162,7 @@ const RegisterOrgB = () => {
             autoComplete="off"
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
+
           <TextField
             label="Create Password"
             name="requester_password"
@@ -145,19 +177,71 @@ const RegisterOrgB = () => {
             margin="dense"
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
-          <TextField
-            label="Phone Number"
-            name="requester_phone"
-            type="tel"
-            size="small"
+
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <FormControl
+              fullWidth
+              size="small"
+              margin="dense"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            >
+              <InputLabel id="country-code-label">Country Code</InputLabel>
+              <Select
+                labelId="country-code-label"
+                name="country_code"
+                value={formData.country_code}
+                label="Country Code"
+                onChange={handleChange}
+              >
+                <MenuItem value="+63">🇵🇭 +63</MenuItem>
+                <MenuItem value="+1">🇺🇸 +1</MenuItem>
+                <MenuItem value="+44">🇬🇧 +44</MenuItem>
+              </Select>
+            </FormControl>
+
+            <TextField
+              label="Phone Number"
+              name="requester_phone"
+              type="tel"
+              size="small"
+              fullWidth
+              value={formData.requester_phone}
+              onChange={handleChange}
+              error={!!errors.requester_phone}
+              helperText={errors.requester_phone || 'Exclude country code'}
+              margin="dense"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            />
+          </Box>
+
+          <FormControl
             fullWidth
-            value={formData.requester_phone}
-            onChange={handleChange}
-            error={!!errors.requester_phone}
-            helperText={errors.requester_phone}
+            size="small"
             margin="dense"
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
-          />
+            error={!!errors.requester_barangay}
+          >
+            <InputLabel id="barangay-label">Barangay</InputLabel>
+            <Select
+              labelId="barangay-label"
+              name="requester_barangay"
+              value={formData.requester_barangay}
+              onChange={handleChange}
+              label="Barangay"
+            >
+              {barangays.map((b) => (
+                <MenuItem key={b.id} value={b.id}>
+                  {b.name} (District {b.district_number})
+                </MenuItem>
+              ))}
+            </Select>
+            {errors.requester_barangay && (
+              <Typography variant="caption" color="error">
+                {errors.requester_barangay}
+              </Typography>
+            )}
+          </FormControl>
+
           <TextField
             label="Role"
             value="B"
@@ -172,12 +256,12 @@ const RegisterOrgB = () => {
             type="submit"
             variant="contained"
             fullWidth
+            disabled={isLoading}
             sx={{
               mt: 2,
               fontWeight: 'bold',
               borderRadius: '0.5rem',
             }}
-            disabled={isLoading}
           >
             {isLoading ? 'Submitting...' : 'Create Account'}
           </Button>

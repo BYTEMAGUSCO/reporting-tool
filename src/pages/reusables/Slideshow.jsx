@@ -2,20 +2,20 @@ import { useEffect, useState } from 'react';
 
 const images = [
   {
-    src: 'https://images.unsplash.com/photo-1581090700227-1e8f62f9c2b5?auto=format&fit=crop&w=800&q=80',
+    src: 'https://res.cloudinary.com/upwork-cloud/image/upload/c_scale,w_1000/v1708533237/catalog/1386012458645008384/jjgkzurpd0bqlru6ejx2.jpg',
     alt: 'Government building',
-    caption: 'Streamlining report creation and approval processes.'
+    caption: 'Streamlining report creation and approval processes.',
   },
   {
-    src: 'https://images.unsplash.com/photo-1570129477492-45c003edd2be?auto=format&fit=crop&w=800&q=80',
-    alt: 'Collaboration',
-    caption: 'Enabling efficient communication between departments.'
+    src: 'https://aventislearning.com/wp-content/uploads/2020/03/Collaboration-1.jpeg',
+    alt: 'Team Collaboration',
+    caption: 'Enabling efficient communication between departments.',
   },
   {
-    src: 'https://images.unsplash.com/photo-1581093588401-14c2f2c97c6a?auto=format&fit=crop&w=800&q=80',
+    src: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=800&q=80',
     alt: 'Admin Panel',
-    caption: 'Track reports and monitor workflow in real-time.'
-  }
+    caption: 'Track reports and monitor workflow in real-time.',
+  },
 ];
 
 const Slideshow = () => {
@@ -56,7 +56,6 @@ const Slideshow = () => {
         </div>
       </div>
 
-      {/* Slide animation keyframes */}
       <style>
         {`
         @keyframes slideIn {
@@ -76,7 +75,7 @@ const styles = {
     height: '100%',
     overflow: 'hidden',
     backgroundColor: '#fff',
-    borderRadius: '8px',
+    borderRadius: '0.5rem',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-start',
@@ -90,18 +89,18 @@ const styles = {
   },
   image: {
     width: '100%',
-    height: '70%',
+    height: '60%', // down from 70% to save vertical space
     objectFit: 'cover',
-    borderTopLeftRadius: '8px',
-    borderTopRightRadius: '8px',
+    borderTopLeftRadius: '0.5rem',
+    borderTopRightRadius: '0.5rem',
   },
   caption: {
-    height: '30%',
+    height: '40%', // up from 30% to fill leftover space
     backgroundColor: '#fff',
-    padding: '1rem',
+    padding: '0.75rem', // shrunk padding a bit
     color: '#1e1f2b',
     fontWeight: 500,
-    fontSize: '1rem',
+    fontSize: '0.9rem', // smaller font for compactness
     textAlign: 'center',
     display: 'flex',
     alignItems: 'center',
