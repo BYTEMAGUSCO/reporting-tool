@@ -121,7 +121,7 @@ const OverviewTab = () => {
           <Typography><strong>Name:</strong> {user.name}</Typography>
           <Typography><strong>Email:</strong> {user.email}</Typography>
           <Typography><strong>Phone:</strong> {user.phone}</Typography>
-          <Typography><strong>Barangay:</strong> {barangayName}</Typography>
+         
           <Typography><strong>Role:</strong> {roleName}</Typography>
         </Stack>
       </Paper>

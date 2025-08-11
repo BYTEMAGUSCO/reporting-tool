@@ -1,112 +1,91 @@
 import { useEffect, useState } from 'react';
-import {
-  Box,
-  Typography,
-  Select,
-  MenuItem,
-  Paper,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Typography, Paper } from '@mui/material';
 
-import FormPreviewRenderer from "../../../orgA/tabs/formtab/formbuildercomponents/FormPreviewRenderer";
-import useFormsFetcher from "../../../orgA/tabs/formtab/manageformtabcomponents/useFormsFetcher";
+import FormSelector from './FormSelector';
+import LoadingIndicator from './LoadingIndicator';
+import FormQuestionsPanel from './FormQuestionsPanel';
+import { getSessionToken, stripUnsupportedChars, getBarangayNameFromSession } from './utils';
 import { showErrorAlert, showSuccessAlert } from '@/services/alert';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 const HEADER_IMAGE_URL = '/header.png';
-
-function getSessionToken() {
-  return JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
-}
 
 const CreateReportTab = () => {
   const [selectedFormId, setSelectedFormId] = useState('');
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [loadingFormData, setLoadingFormData] = useState(false);
+  const [forms, setForms] = useState([]);
+  const [loadingForms, setLoadingForms] = useState(false);
 
-  const { forms, loading, fetchForms } = useFormsFetcher(1);
-
+  // Fetch forms on mount
   useEffect(() => {
+    const fetchForms = async () => {
+      setLoadingForms(true);
+      try {
+        const token = getSessionToken();
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result?.error?.message || 'Failed to load forms');
+        setForms(result.data || []);
+      } catch (err) {
+        await showErrorAlert(`Failed to load forms: ${err.message || err}`);
+      } finally {
+        setLoadingForms(false);
+      }
+    };
     fetchForms();
   }, []);
 
+  // Load selected form content
   useEffect(() => {
-    if (selectedFormId) {
-      loadForm(selectedFormId);
-    }
-  }, [selectedFormId]);
+    if (!selectedFormId) return;
 
-  const loadForm = async (formId) => {
-    setLoadingFormData(true);
-    setSelectedQuestions([]);
-    setAnswers({});
-    try {
-      const token = getSessionToken();
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+    const loadForm = async () => {
+      setLoadingFormData(true);
+      setSelectedQuestions([]);
+      setAnswers({});
+      try {
+        const token = getSessionToken();
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`, {
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result?.error?.message || 'Failed to fetch form data');
+
+        const form = result.data?.find((f) => f.form_id === selectedFormId);
+        if (!form?.form_content) {
+          await showErrorAlert('Form is empty or corrupted.');
+          return;
         }
-      );
 
-      const result = await res.json();
-      if (!res.ok) throw new Error(result?.error?.message || 'Failed to fetch form data');
+        const parsed = Array.isArray(form.form_content)
+          ? form.form_content
+          : JSON.parse(form.form_content);
 
-      const form = result.data?.find((f) => f.form_id === formId);
-      if (!form?.form_content) {
-        showErrorAlert('Form is empty or corrupted.');
-        return;
+        if (!Array.isArray(parsed)) {
+          await showErrorAlert('Form structure is invalid.');
+          return;
+        }
+
+        setSelectedQuestions(parsed);
+      } catch (err) {
+        await showErrorAlert(`Error loading form.\n\n${err.message || err}`);
+      } finally {
+        setLoadingFormData(false);
       }
+    };
 
-      const parsed = Array.isArray(form.form_content)
-        ? form.form_content
-        : JSON.parse(form.form_content);
-
-      if (!Array.isArray(parsed)) {
-        showErrorAlert('Form structure is invalid.');
-        return;
-      }
-
-      setSelectedQuestions(parsed);
-    } catch (err) {
-      showErrorAlert(`Something went wrong while loading the form.\n\n${err.message || err}`);
-    } finally {
-      setLoadingFormData(false);
-    }
-  };
+    loadForm();
+  }, [selectedFormId]);
 
   const handleAnswerChange = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
   const handleFormSubmit = async (formJSON) => {
-    const stripUnsupportedChars = (text) =>
-      text?.toString().replace(/[^\x00-\x7F]/g, '') || '';
-
-    // Helper to fetch barangay name from session, exactly like FormFillerTab
-    const getBarangayNameFromSession = async () => {
-      try {
-        const session = JSON.parse(sessionStorage.getItem('session'));
-        const barangayId = session?.user?.user_metadata?.barangay;
-        if (!barangayId) return '';
-
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/barangays`);
-        const barangayList = await res.json();
-
-        const match = barangayList.find((b) => b.id === barangayId);
-        return match ? `${match.name} (District ${match.district_number})` : '';
-      } catch (err) {
-        console.error('Failed to get barangay name:', err);
-        return '';
-      }
-    };
-
     try {
       const form = forms.find((f) => f.form_id === selectedFormId);
       const formName = stripUnsupportedChars(form?.form_name || 'Form');
@@ -123,7 +102,7 @@ const CreateReportTab = () => {
       try {
         const imgBytes = await fetch(HEADER_IMAGE_URL).then((res) => res.arrayBuffer());
         const img = await pdfDoc.embedPng(imgBytes);
-        const imgWidth = 200;
+        const imgWidth = 500;
         const imgHeight = 80;
         page.drawImage(img, {
           x: (width - imgWidth) / 2,
@@ -132,11 +111,11 @@ const CreateReportTab = () => {
           height: imgHeight,
         });
         y -= imgHeight + 20;
-      } catch (imgErr) {
-        console.warn('Failed to load header image:', imgErr);
+      } catch {
+        // ignore image load errors
       }
 
-      // Barangay Name (same logic as FormFillerTab)
+      // Barangay Name
       const barangayNameRaw = await getBarangayNameFromSession();
       if (barangayNameRaw) {
         const barangayName = stripUnsupportedChars(barangayNameRaw);
@@ -201,18 +180,13 @@ const CreateReportTab = () => {
         barangayNameRaw ? `_${stripUnsupportedChars(barangayNameRaw).replace(/\s+/g, '_')}` : ''
       }_submission.pdf`;
 
-      console.log('[Uploading PDF with filename]:', safeFileName);
-
       formData.append('file', pdfBlob, safeFileName);
 
-      const uploadRes = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-report`,
-        {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: formData,
-        }
-      );
+      const uploadRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-report`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
 
       if (!uploadRes.ok) {
         let msg = 'An unknown error occurred.';
@@ -236,10 +210,10 @@ const CreateReportTab = () => {
         throw new Error(msg);
       }
 
-      showSuccessAlert('Report submitted successfully.');
+      await showSuccessAlert('Report submitted successfully.');
       setAnswers({});
     } catch (err) {
-      showErrorAlert(`Could not submit the report.\n\n${err.message || 'Unknown error.'}`);
+      await showErrorAlert(`Could not submit the report.\n\n${err.message || 'Unknown error.'}`);
     }
   };
 
@@ -250,48 +224,27 @@ const CreateReportTab = () => {
       </Typography>
 
       <Paper sx={{ p: 2, borderRadius: 2, mb: 2 }}>
-        <FormControl fullWidth>
-          <InputLabel>Select a Form</InputLabel>
-          <Select
-            value={selectedFormId || ''}
-            onChange={(e) => setSelectedFormId(e.target.value)}
-            label="Select a Form"
-          >
-            <MenuItem disabled value="">
-              -- Select a Form --
-            </MenuItem>
-            {forms
-              .filter((form) => form.is_visible !== 'N') // <--- here we filter out the invisible ones
-              .map((form) => (
-                <MenuItem key={form.form_id} value={form.form_id}>
-                  {form.form_name}
-                </MenuItem>
-              ))}
-          </Select>
-        </FormControl>
+        {loadingForms ? (
+          <Typography textAlign="center">Loading forms...</Typography>
+        ) : (
+          <FormSelector
+            forms={forms}
+            selectedFormId={selectedFormId}
+            onSelect={setSelectedFormId}
+          />
+        )}
       </Paper>
 
-      {loadingFormData && (
-        <Box display="flex" justifyContent="center" mt={2}>
-          <CircularProgress />
-        </Box>
-      )}
+      {loadingFormData && <LoadingIndicator />}
 
       {!loadingFormData && selectedQuestions.length > 0 && (
-        <Paper sx={{ p: 3, borderRadius: 2 }}>
-          <Typography variant="h6" fontWeight="bold" sx={{ mb: 2 }}>
-            Answer the Questions:
-          </Typography>
-
-          <FormPreviewRenderer
-            key={selectedFormId}
-            questions={selectedQuestions}
-            mode="submit"
-            answers={answers}
-            onAnswerChange={handleAnswerChange}
-            onSubmit={handleFormSubmit}
-          />
-        </Paper>
+        <FormQuestionsPanel
+          selectedFormId={selectedFormId}
+          selectedQuestions={selectedQuestions}
+          answers={answers}
+          onAnswerChange={handleAnswerChange}
+          onSubmit={handleFormSubmit}
+        />
       )}
     </Box>
   );

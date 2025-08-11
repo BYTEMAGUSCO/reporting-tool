@@ -27,31 +27,7 @@ export const signOutUser = async (navigate, redirectTo = '/') => {
   }
 };
 
-export const setupSessionPing = (navigate) => {
-  return setInterval(async () => {
-    const token = getStoredToken();
-    if (!token) return;
-
-    try {
-      // This endpoint should just check token validity, NOT sign out
-      const res = await fetch('https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/validate-token', {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (res.status === 401 || res.status === 403) {
-        alert('Session expired. Please log in again');
-        sessionStorage.clear();
-        navigate('/');
-      }
-    } catch {
-      // ignore ping errors
-    }
-  }, 5 * 60 * 1000);
-};
+// Removed setupSessionPing — it was calling /validate-token
 
 export const setupTabCloseLogout = () => {
   const handler = () => {

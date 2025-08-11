@@ -130,7 +130,7 @@ const FormFillerTab = () => {
     try {
       const imgBytes = await fetch(HEADER_IMAGE_URL).then((res) => res.arrayBuffer());
       const img = await pdfDoc.embedPng(imgBytes);
-      const imgWidth = 200;
+      const imgWidth = 500;
       const imgHeight = 80;
       page.drawImage(img, {
         x: (width - imgWidth) / 2,

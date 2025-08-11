@@ -38,7 +38,7 @@ const RegisterOrgA = () => {
         const data = await res.json();
         setBarangays(data);
       } catch (err) {
-        // console.error('Failed to load barangays:', err);
+        console.error('Failed to load barangays:', err);
         showErrorAlert('Barangay load fail 🥲', 'Try reloading the page!');
       }
     };
@@ -93,7 +93,7 @@ const RegisterOrgA = () => {
         }
       }
     } catch (err) {
-      // console.error('💥 Registration error:', err);
+      console.error('💥 Registration error:', err);
       showErrorAlert('Something went wrong', 'Try again later!');
     } finally {
       setIsLoading(false);
