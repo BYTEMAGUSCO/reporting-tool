@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -37,59 +37,64 @@ const NotificationsTab = () => {
   const userId =
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
 
-const fetchNotifications = async () => {
-  if (!token) return;
-  setLoading(true);
-  try {
-    const url =
-      userRole === 'B' && userId
-        ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications/${userId}`
-        : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications`;
+  // Stable fetchNotifications wrapped in useCallback
+  const fetchNotifications = useCallback(async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const url =
+        userRole === 'B' && userId
+          ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications/${userId}`
+          : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications`;
 
-    console.log('🔥 Fetching notifications from URL:', url); 
+      console.log('🔥 Fetching notifications from URL:', url);
 
-    const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!res.ok) throw new Error(await res.text());
+      if (!res.ok) throw new Error(await res.text());
 
-    const { data } = await res.json();
-    setNotifications(data || []);
-  } catch (err) {
-    console.error('❌ Error fetching notifications:', err);
-    setError('Uh oh… couldn’t load your notifications 😔');
-  } finally {
-    setLoading(false);
-  }
-};
+      const { data } = await res.json();
+      console.log('💬 Notifications fetched:', data);
+      setNotifications(data || []);
+      setError(null);
+    } catch (err) {
+      console.error('❌ Error fetching notifications:', err);
+      setError('Uh oh… couldn’t load your notifications 😔');
+    } finally {
+      setLoading(false);
+    }
+  }, [token, userRole, userId]);
 
-
+  // Fetch on mount
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
 
-useEffect(() => {
-  if (!token) return;
+  // Realtime subscription — stable, only depends on token
+  useEffect(() => {
+    if (!token) return;
 
-  const channel = supabase
-    .channel('realtime:notifications')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'notifications' },
-      () => {
-        fetchNotifications(); 
-      }
-    )
-    .subscribe();
+    const channel = supabase
+      .channel('realtime:notifications')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        (payload) => {
+          console.log('Realtime event:', payload);
+          fetchNotifications();
+        }
+      )
+      .subscribe();
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [token, userRole, userId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [token, fetchNotifications]);
 
   const markAsViewed = async (id) => {
     try {
@@ -118,12 +123,11 @@ useEffect(() => {
     ? notifications.filter((n) => !n.is_viewed)
     : notifications;
 
-  // Counts for badge display
   const unreadCount = notifications.filter((n) => !n.is_viewed).length;
   const readCount = notifications.length - unreadCount;
 
   return (
-     <Box sx={{ p: 2 }}>
+    <Box sx={{ p: 2 }}>
       <Typography
         variant="h6"
         sx={{
@@ -137,7 +141,6 @@ useEffect(() => {
         Your Notifications
       </Typography>
 
-      {/* Counts */}
       <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
         <Typography variant="body2" color="text.secondary">
           Read: {readCount}
@@ -148,23 +151,27 @@ useEffect(() => {
       </Stack>
 
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-  <Button
-    variant={showUnreadOnly === false ? 'contained' : 'outlined'}
-    color="primary"
-    onClick={() => setShowUnreadOnly(false)} // always sets to show all
-    endIcon={showUnreadOnly === false ? <CheckIcon sx={{ fontSize: 18 }} /> : null}
-  >
-    All
-  </Button>
-  <Button
-    variant={showUnreadOnly === true ? 'contained' : 'outlined'}
-    color="primary"
-    onClick={() => setShowUnreadOnly((prev) => (prev === true ? false : true))}
-    endIcon={showUnreadOnly === true ? <CheckIcon sx={{ fontSize: 18 }} /> : null}
-  >
-    Unread
-  </Button>
-</Stack>
+        <Button
+          variant={showUnreadOnly === false ? 'contained' : 'outlined'}
+          color="primary"
+          onClick={() => setShowUnreadOnly(false)}
+          endIcon={
+            showUnreadOnly === false ? <CheckIcon sx={{ fontSize: 18 }} /> : null
+          }
+        >
+          All
+        </Button>
+        <Button
+          variant={showUnreadOnly === true ? 'contained' : 'outlined'}
+          color="primary"
+          onClick={() => setShowUnreadOnly((prev) => !prev)}
+          endIcon={
+            showUnreadOnly === true ? <CheckIcon sx={{ fontSize: 18 }} /> : null
+          }
+        >
+          Unread
+        </Button>
+      </Stack>
 
       {loading ? (
         <>
@@ -185,59 +192,58 @@ useEffect(() => {
         <List>
           {filteredNotifications.map((n) => (
             <Fade in key={n.id} timeout={500}>
-   <ListItem
-  button={!n.is_viewed}
-  onClick={() => !n.is_viewed && markAsViewed(n.id)}
-  sx={{
-    border: '1px solid #eee',
-    borderRadius: 2,
-    mb: 1,
-    backgroundColor: n.is_viewed ? '#f9f9f9' : '#fffdf8',
-    boxShadow: n.is_viewed ? 0 : 1,
-    cursor: n.is_viewed ? 'default' : 'pointer',
-    position: 'relative',
-    pr: 5, // more right padding for dot space
-  }}
->
-  <ListItemText
-    primary={
-      <Typography
-        sx={{
-          fontWeight: 600,
-          fontStyle: n.is_viewed ? 'normal' : 'italic',
-          color: n.is_viewed ? 'text.secondary' : 'text.primary',
-        }}
-      >
-        {n.title}
-      </Typography>
-    }
-    secondary={
-      <>
-        {n.content}
-        <Typography
-          variant="caption"
-          sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}
-        >
-          {new Date(n.created_at).toLocaleString()}
-        </Typography>
-      </>
-    }
-  />
+              <ListItem
+                button={!n.is_viewed}
+                onClick={() => !n.is_viewed && markAsViewed(n.id)}
+                sx={{
+                  border: '1px solid #eee',
+                  borderRadius: 2,
+                  mb: 1,
+                  backgroundColor: n.is_viewed ? '#f9f9f9' : '#fffdf8',
+                  boxShadow: n.is_viewed ? 0 : 1,
+                  cursor: n.is_viewed ? 'default' : 'pointer',
+                  position: 'relative',
+                  pr: 5,
+                }}
+              >
+                <ListItemText
+                  primary={
+                    <Typography
+                      sx={{
+                        fontWeight: 600,
+                        fontStyle: n.is_viewed ? 'normal' : 'italic',
+                        color: n.is_viewed ? 'text.secondary' : 'text.primary',
+                      }}
+                    >
+                      {n.title}
+                    </Typography>
+                  }
+                  secondary={
+                    <>
+                      {n.content}
+                      <Typography
+                        variant="caption"
+                        sx={{ display: 'block', mt: 0.5, color: 'text.secondary' }}
+                      >
+                        {new Date(n.created_at).toLocaleString()}
+                      </Typography>
+                    </>
+                  }
+                />
 
-  {!n.is_viewed && (
-    <FiberManualRecordIcon
-      color="error"
-      fontSize="small"
-      sx={{
-        position: 'absolute',
-        right: 10,
-        top: '50%',
-        transform: 'translateY(-50%)',
-      }}
-    />
-  )}
-</ListItem>
-
+                {!n.is_viewed && (
+                  <FiberManualRecordIcon
+                    color="error"
+                    fontSize="small"
+                    sx={{
+                      position: 'absolute',
+                      right: 10,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                    }}
+                  />
+                )}
+              </ListItem>
             </Fade>
           ))}
         </List>

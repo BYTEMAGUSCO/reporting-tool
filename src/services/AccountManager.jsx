@@ -70,43 +70,44 @@ export class AccountManager {
     return await this.tryRegister(cleanedData, this.maxRetries);
   }
 
-  async tryRegister(payload, retriesLeft) {
-    try {
-      const response = await fetch(this.apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+async tryRegister(payload, retriesLeft) {
+  try {
+    const response = await fetch(this.apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-      const result = await response.json();
+    const result = await response.json();
 
-      if (!response.ok) {
-        return {
-          success: false,
-          message: result.message || "Something went wrong ❌",
-          status: response.status,
-          error: result.error || null,
-        };
-      }
-
-      return {
-        success: true,
-        message: result.message || "Registration request sent ✅",
-      };
-    } catch (err) {
-      // console.error(`🌐 Network error (${this.maxRetries - retriesLeft + 1} attempt):`, err);
-      if (retriesLeft > 0) {
-        return this.tryRegister(payload, retriesLeft - 1);
-      }
-
+    if (!response.ok) {
+      console.error(`🔥 Server returned ${response.status}:`, result);
       return {
         success: false,
-        message: "Network error 💥 All retries failed",
+        message: result.error || result.message || `Something went wrong ❌ (status ${response.status})`,
+        status: response.status,
+        error: result.error || null,
       };
     }
+
+    return {
+      success: true,
+      message: result.message || "Registration request sent ✅",
+    };
+  } catch (err) {
+    console.error(`🌐 Network error (${this.maxRetries - retriesLeft + 1} attempt):`, err);
+    if (retriesLeft > 0) {
+      return this.tryRegister(payload, retriesLeft - 1);
+    }
+
+    return {
+      success: false,
+      message: "Network error 💥 All retries failed",
+      error: err.message,
+    };
   }
+}
+
 
  async login(email, password) {
   try {

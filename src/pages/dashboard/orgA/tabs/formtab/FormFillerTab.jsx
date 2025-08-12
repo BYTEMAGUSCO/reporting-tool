@@ -131,7 +131,7 @@ const FormFillerTab = () => {
       const imgBytes = await fetch(HEADER_IMAGE_URL).then((res) => res.arrayBuffer());
       const img = await pdfDoc.embedPng(imgBytes);
       const imgWidth = 500;
-      const imgHeight = 80;
+      const imgHeight = 100;
       page.drawImage(img, {
         x: (width - imgWidth) / 2,
         y: y - imgHeight,
@@ -202,10 +202,13 @@ const FormFillerTab = () => {
     // Upload PDF
     const token = getSessionToken();
     const formData = new FormData();
+    const session = JSON.parse(sessionStorage.getItem('session'));
+const userNameRaw = session?.user?.user_metadata?.full_name || session?.user?.email || 'Anonymous';
+const safeUserName = stripUnsupportedChars(userNameRaw).replace(/\s+/g, '_');
     const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const safeFileName = `${formName.replace(/\s+/g, '_')}${
-      barangayNameRaw ? `_${stripUnsupportedChars(barangayNameRaw).replace(/\s+/g, '_')}` : ''
-    }_submission.pdf`;
+   const safeFileName = `${formName.replace(/\s+/g, '_')}${
+  barangayNameRaw ? `_${stripUnsupportedChars(barangayNameRaw).replace(/\s+/g, '_')}` : ''
+}_${safeUserName}_submission.pdf`;
     formData.append('file', pdfBlob, safeFileName);
 
     console.log('[Uploading PDF with filename]:', safeFileName);

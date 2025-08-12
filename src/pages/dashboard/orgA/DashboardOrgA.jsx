@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   Box,
   Drawer,
@@ -36,6 +36,7 @@ import NotificationsTab from './tabs/NotificationsTab';
 import EventIcon from '@mui/icons-material/Event';
 import EventsTab from './tabs/EventsTab';
 import ChartsTab from './tabs/ChartsTab';
+import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
 
 import {
   signOutUser,
@@ -64,6 +65,9 @@ const DashboardOrgA = () => {
   // Snackbar states for new notif popups
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+
+  // Ref to track previous notifications for diffing new ones
+  const prevNotificationsRef = useRef([]);
 
   // Session info
   const storedSession = sessionStorage.getItem('session');
@@ -102,32 +106,56 @@ const DashboardOrgA = () => {
     }
   };
 
-  // Fetch on mount
+  // Fetch on mount or token change
   useEffect(() => {
     fetchNotifications();
   }, [token]);
-useEffect(() => {
-  if (!token) return;
 
-  const channel = supabase
-    .channel('realtime:notifications')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'notifications' },
-      () => {
-        fetchNotifications(); // Reload all notifications fresh every time anything changes
-      }
-    )
-    .subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log('🔥 Supabase realtime listener started successfully!');
-      }
-    });
+  // Realtime listener for notifications table changes
+  useEffect(() => {
+    if (!token) return;
 
-  return () => {
-    supabase.removeChannel(channel);
-  };
-}, [token, userRole, userId]);
+    const channel = supabase
+      .channel('realtime:notifications')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications' },
+        () => {
+          fetchNotifications(); // Reload fresh on any change
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('🔥 Supabase realtime listener started successfully!');
+        }
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [token, userRole, userId]);
+
+  // Detect new unread notifications and show popup
+  useEffect(() => {
+    if (!notifications.length) return;
+
+    const prevNotifications = prevNotificationsRef.current;
+
+    // Find new unread notifications that were not in previous state
+    const newNotifs = notifications.filter(
+      (n) => !n.is_viewed && !prevNotifications.some((prev) => prev.id === n.id)
+    );
+
+    if (newNotifs.length > 0) {
+      // Show popup for newest notification's title
+      setSnackbarMessage(newNotifs[0].title);
+      setSnackbarOpen(true);
+      setUnreadCount(notifications.filter((n) => !n.is_viewed).length);
+    }
+
+    // Update ref for next comparison
+    prevNotificationsRef.current = notifications;
+  }, [notifications]);
 
   // Snackbar close handler
   const closeSnackbar = () => {
@@ -166,8 +194,6 @@ useEffect(() => {
     await signOutUser(navigate);
     setIsLoggingOut(false);
   };
-
-  // Startup/session checks you already got, just keep your logic here...
 
   return (
     <>
@@ -251,7 +277,7 @@ useEffect(() => {
                           fontSize: '0.7rem',
                           height: 18,
                           minWidth: 18,
-                          marginRight:'20px'
+                          marginRight: '20px',
                         },
                       }}
                     />
@@ -302,17 +328,47 @@ useEffect(() => {
         </Box>
       </Box>
 
-      {/* Snackbar for new notifications */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={closeSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={closeSnackbar} severity="info" sx={{ width: '100%' }}>
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
+ <Snackbar
+  open={snackbarOpen}
+  autoHideDuration={4000}
+  onClose={closeSnackbar}
+  anchorOrigin={{ vertical: 'top', horizontal: 'right' }} // <-- top right now
+  sx={{
+    '& .MuiPaper-root': {
+      minWidth: 320,
+      maxWidth: 400,
+      borderRadius: '0.5rem',
+      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+      mt: 2, // add some margin from top edge so it’s not glued
+    },
+  }}
+>
+  <Alert
+    onClose={closeSnackbar}
+    severity="info"
+    icon={
+      <NotificationsActiveRoundedIcon
+        sx={{ fontSize: 28, mr: 1, color: '#fbbf24' }} // golden yellow bell icon
+      />
+    }
+    sx={{
+      width: '100%',
+      fontWeight: 700,
+      fontSize: '1.1rem',
+      borderRadius: '0.5rem',
+      backgroundColor: '#e0f2fe',
+      color: '#000000ff',
+      px: 2,
+      py: 1.5,
+      display: 'flex',
+      alignItems: 'center',
+      boxShadow: '0 1px 6px rgba(0,0,0,0.12)',
+    }}
+  >
+    {snackbarMessage}
+  </Alert>
+</Snackbar>
+
     </>
   );
 };

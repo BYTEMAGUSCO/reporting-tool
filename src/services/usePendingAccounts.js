@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -11,7 +11,8 @@ export default function usePendingAccounts(token, page, limit) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     try {
       const res = await fetch(
@@ -25,16 +26,17 @@ export default function usePendingAccounts(token, page, limit) {
       );
       const json = await res.json();
       setData(json);
+      setError(null);
     } catch (err) {
       setError('Failed to fetch');
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, page, limit]);
 
   useEffect(() => {
     fetchData();
-  }, [page, limit]);
+  }, [fetchData]);
 
   useEffect(() => {
     if (!token) return;
@@ -46,37 +48,12 @@ export default function usePendingAccounts(token, page, limit) {
         {
           event: '*',
           schema: 'public',
-          table: 'registration_requests',
+          table: 'pending_registration_requests',
         },
         (payload) => {
-          // console.log('Realtime change:', payload);
-
-          setData((prev) => {
-            let updated = [...prev.data];
-
-            if (payload.eventType === 'INSERT') {
-              if (payload.new.request_status === 'P') {
-                updated = [payload.new, ...updated];
-              }
-            } else if (payload.eventType === 'UPDATE') {
-              if (payload.new.request_status === 'P') {
-                // update if still pending
-                updated = updated.map((acc) =>
-                  acc.id === payload.new.id ? payload.new : acc
-                );
-              } else {
-                // remove if status changed to approved/rejected
-                updated = updated.filter((acc) => acc.id !== payload.new.id);
-              }
-            } else if (payload.eventType === 'DELETE') {
-              updated = updated.filter((acc) => acc.id !== payload.old.id);
-            }
-
-            return {
-              ...prev,
-              data: updated,
-            };
-          });
+          console.log('Realtime change:', payload);
+          // On any insert/update/delete event, refetch fresh data:
+          fetchData();
         }
       )
       .subscribe();
@@ -84,7 +61,7 @@ export default function usePendingAccounts(token, page, limit) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [token]);
+  }, [token, fetchData]);
 
   return { data, loading, error, refetch: fetchData };
 }
