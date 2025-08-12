@@ -11,26 +11,30 @@ export default function useNotificationAlerts() {
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
   useEffect(() => {
-    const storedSession = sessionStorage.getItem('session');
-    if (!storedSession) return;
+  const storedSession = sessionStorage.getItem('session');
+  if (!storedSession) return;
 
-    const parsed = JSON.parse(storedSession);
-    const userRole =
-      parsed?.user?.user_metadata?.role || parsed?.[0]?.identity_data?.role;
-    const userId = parsed?.user?.id || parsed?.[0]?.user_id;
+  const parsed = JSON.parse(storedSession);
+  const userRole =
+    parsed?.user?.user_metadata?.role || parsed?.[0]?.identity_data?.role;
+  const userId = parsed?.user?.id || parsed?.[0]?.user_id;
 
-    if (!userId || !userRole) return;
+  if (!userId || !userRole) return;
 
-    const channel = supabase
-      .channel('realtime:notifications')
+  const channel = supabase.channel('realtime:notifications');
+
+  const subscribe = async () => {
+    const { error, status } = await channel
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications' },
+        { event: '*', schema: 'public', table: 'notifications' },
         (payload) => {
-          // Only notify if the notification is meant for this user or all users (null)
+          console.log('Realtime notification:', payload);
+
           if (
-            (userRole === 'B' && payload.new.specified_to === userId) ||
-            (userRole !== 'B' && payload.new.specified_to === null)
+            payload.eventType === 'INSERT' &&
+            ((userRole === 'B' && payload.new.specified_to === userId) ||
+              (userRole !== 'B' && payload.new.specified_to === null))
           ) {
             setSnackbarMessage(payload.new.title || 'New Notification');
             setSnackbarOpen(true);
@@ -39,10 +43,17 @@ export default function useNotificationAlerts() {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    if (error) console.error('Subscription error:', error);
+    else if (status === 'SUBSCRIBED') console.log('Subscribed to notifications');
+  };
+
+  subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []); // Or add [userRole, userId] if you want dynamic resubscribe
+
 
   return {
     snackbarOpen,

@@ -16,14 +16,15 @@ import {
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
+// Icons (all black)
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import LogoutIcon from '@mui/icons-material/Logout';
 
 import GovLogoOnly from './../../reusables/GovLogoOnly';
-
 
 import {
   signOutUser,
@@ -33,11 +34,42 @@ import {
 
 import useNotificationAlerts from '@/services/useNotificationsAlerts';
 
+// Tabs components
+import OverviewTab from './tabs/OverviewTab';
+import ViewReportsTabFilteredByBarangay from './tabs/ViewReportsTab';
+import CreateReportTab from './tabs/CreateReportTab/index';
+
+// Notifications tab from orgA
+import NotificationsTab from '../orgA/tabs/NotificationsTab';
+
 const drawerWidth = 260;
 
 const tabs = [
-  { label: 'Dashboard', icon: <DashboardIcon />, component: <Typography sx={{ p: 2 }}>Welcome to OrgB Dashboard!</Typography> },
-  { label: 'Settings', icon: <SettingsIcon />, component: <Typography sx={{ p: 2 }}>Settings coming soon...</Typography> },
+  {
+    label: 'Overview',
+    icon: <DashboardIcon sx={{ color: 'black' }} />,
+    component: <OverviewTab />,
+  },
+  {
+    label: 'Reports',
+    icon: <AssignmentIcon sx={{ color: 'black' }} />,
+    component: <ViewReportsTabFilteredByBarangay />,
+  },
+  {
+    label: 'Create Report',
+    icon: <PeopleIcon sx={{ color: 'black' }} />,
+    component: <CreateReportTab />,
+  },
+  {
+    label: 'Notifications',
+    icon: <NotificationsIcon sx={{ color: 'black' }} />,
+    component: <NotificationsTab />,
+  },
+  {
+    label: 'Settings',
+    icon: <SettingsIcon sx={{ color: 'black' }} />,
+    component: <Typography sx={{ p: 2 }}>Settings coming soon...</Typography>,
+  },
 ];
 
 const DashboardOrgB = () => {
@@ -139,7 +171,7 @@ const DashboardOrgB = () => {
                   <ListItemIcon
                     sx={{
                       minWidth: 36,
-                      color: theme.palette.text.primary,
+                      color: activeTab === index ? theme.palette.text.primary : 'black',
                     }}
                   >
                     {tab.icon}
@@ -151,7 +183,7 @@ const DashboardOrgB = () => {
                         fontSize="0.95rem"
                         sx={{
                           fontWeight: activeTab === index ? 600 : 500,
-                          color: theme.palette.text.primary,
+                          color: activeTab === index ? theme.palette.text.primary : 'black',
                         }}
                       >
                         {tab.label}
@@ -174,7 +206,7 @@ const DashboardOrgB = () => {
                 isLoggingOut ? (
                   <CircularProgress size={16} color="inherit" />
                 ) : (
-                  <LogoutIcon fontSize="small" />
+                  <LogoutIcon sx={{ color: 'black' }} fontSize="small" />
                 )
               }
               disabled={isLoggingOut}
@@ -183,7 +215,7 @@ const DashboardOrgB = () => {
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 borderRadius: '0.5rem',
-                color: theme.palette.text.primary,
+                color: 'black',
                 '&:hover': {
                   backgroundColor: theme.palette.primary.light,
                 },

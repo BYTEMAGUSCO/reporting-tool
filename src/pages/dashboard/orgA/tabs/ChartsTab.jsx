@@ -103,7 +103,7 @@ const sanitizeReportName = (reportName, barangayNames) => {
           throw new Error(errJson.error || 'Failed to load reports');
         }
         const json = await res.json();
-        console.log('📦 All reports fetched:', json.data);
+        //console.log('📦 All reports fetched:', json.data);
 
         const barangayNames = barangaysData.map(b => b.name);
 
@@ -117,7 +117,7 @@ const sanitizeReportName = (reportName, barangayNames) => {
   const status = report.report_status || 'P';
 
   // LOG IT BABE 👀
-  console.log('🔥 Report Name:', report.report_name, '| Sanitized Report Type:', sanitizedType);
+  //console.log('🔥 Report Name:', report.report_name, '| Sanitized Report Type:', sanitizedType);
 
   if (!counts[brgyName]) counts[brgyName] = {};
   const key = `${sanitizedType}_${status}`;
