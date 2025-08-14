@@ -28,7 +28,6 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-
 const EventsTab = () => {
   const token = getStoredToken();
   const [page, setPage] = useState(1);
@@ -36,17 +35,18 @@ const EventsTab = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Approve/deny loading states (track which event is processing)
   const [approvingId, setApprovingId] = useState(null);
   const [denyingId, setDenyingId] = useState(null);
-  // Add modal loading
   const [addingEvent, setAddingEvent] = useState(false);
 
   const [openAdd, setOpenAdd] = useState(false);
   const [newEvent, setNewEvent] = useState({ name: '', description: '', date: '', location: '' });
 
-  // Barangay list (optional)
   const [barangayList, setBarangayList] = useState([]);
+
+  // Dialog for full description
+  const [openDesc, setOpenDesc] = useState(false);
+  const [selectedDesc, setSelectedDesc] = useState('');
 
   useEffect(() => {
     fetchEvents(page);
@@ -61,29 +61,24 @@ const EventsTab = () => {
     }
   };
 
-  
-useEffect(() => {
-  if (!token) return;
+  useEffect(() => {
+    if (!token) return;
 
-  const channel = supabase
-    .channel('realtime:events')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'events' },
-      async () => {
-        // Just refetch the current page of events, no need to care about event type
-        fetchEvents(page);
-      }
-    )
-    .subscribe(status => {
-      if (status === 'SUBSCRIBED') {
-        console.log('🔥 Supabase realtime listener for events started!');
-      }
-    });
+    const channel = supabase
+      .channel('realtime:events')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'events' },
+        async () => fetchEvents(page)
+      )
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          console.log('🔥 Supabase realtime listener for events started!');
+        }
+      });
 
-  return () => supabase.removeChannel(channel);
-}, [token, page]);  // Include page in deps so it always fetches correct page
-
+    return () => supabase.removeChannel(channel);
+  }, [token, page]);
 
   const fetchEvents = async (pageNumber = 1) => {
     setLoading(true);
@@ -116,12 +111,10 @@ useEffect(() => {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Failed to approve event');
       }
-
       await showSuccessAlert('Event approved! 🎉');
       fetchEvents(page);
     } catch (error) {
@@ -140,12 +133,10 @@ useEffect(() => {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Failed to deny event');
       }
-
       await showSuccessAlert('Event denied!');
       fetchEvents(page);
     } catch (error) {
@@ -165,12 +156,10 @@ useEffect(() => {
       await showErrorAlert('Description is required.');
       return;
     }
-
     setAddingEvent(true);
 
     const dateTimeStart = new Date(`${newEvent.date}T09:00:00`).toISOString();
     const dateTimeEnd = new Date(`${newEvent.date}T17:00:00`).toISOString();
-
     const barangayFromSession = getUserBarangay();
 
     const payload = {
@@ -198,7 +187,7 @@ useEffect(() => {
         throw new Error(err.error || 'Failed to add event');
       }
 
-      setOpenAdd(false);  // Close modal immediately
+      setOpenAdd(false);
       setNewEvent({ name: '', description: '', date: '', location: '' });
       await showSuccessAlert('Event added! 🎉');
       fetchEvents(page);
@@ -209,6 +198,8 @@ useEffect(() => {
       setAddingEvent(false);
     }
   };
+
+  const handleRowClick = (desc) => setSelectedDesc(desc || 'No description') || setOpenDesc(true);
 
   return (
     <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
@@ -228,21 +219,14 @@ useEffect(() => {
 
       <Divider sx={{ mb: 2 }} />
 
-      <Box
-        sx={{
-          overflowX: 'auto',
-          maxHeight: '60vh',
-          overflowY: 'auto',
-          borderRadius: '0.5rem',
-        }}
-      >
+      <Box sx={{ overflowX: 'auto', maxHeight: '60vh', overflowY: 'auto', borderRadius: '0.5rem' }}>
         <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
           <TableHead>
             <TableRow>
               <TableCell><strong>Name</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
               <TableCell><strong>Barangay</strong></TableCell>
-              <TableCell><strong>Submitted By</strong></TableCell>
+              <TableCell><strong>Description</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell align="right"><strong>Action</strong></TableCell>
             </TableRow>
@@ -267,56 +251,71 @@ useEffect(() => {
                 </TableCell>
               </TableRow>
             ) : (
-              events.map((event) => (
-                <TableRow key={event?.id || Math.random()} hover>
-                  <TableCell>{event?.name || '—'}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={event?.status || 'pending'}
-                      color={
-                        event?.status === 'approved'
-                          ? 'success'
-                          : event?.status === 'denied'
-                          ? 'error'
-                          : 'warning'
-                      }
-                      size="small"
-                      sx={{ fontSize: '0.7rem', height: '22px', borderRadius: '0.5rem' }}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const found = barangayList.find((b) => b.id === event?.barangay);
-                      return found ? found.name : event?.barangay || 'N/A';
-                    })()}
-                  </TableCell>
-                  <TableCell>{event?.submitted_by || 'N/A'}</TableCell>
-                  <TableCell>
-                    {event?.created_at ? new Date(event.created_at).toLocaleDateString() : '—'}
-                  </TableCell>
-                  <TableCell align="right">
-                    <Button
-                      variant="contained"
-                      size="small"
-                      color="success"
-                      sx={{ mr: 1 }}
-                      onClick={() => handleApprove(event?.id)}
-                      disabled={event?.status === 'approved' || approvingId === event?.id || loading}
-                    >
-                      {approvingId === event?.id ? 'Approving...' : 'Approve'}
-                    </Button>
-                    <Button
-                      variant="contained"
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeny(event?.id)}
-                      disabled={event?.status === 'denied' || denyingId === event?.id || loading}
-                    >
-                      {denyingId === event?.id ? 'Denying...' : 'Deny'}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
+              events.map((event) => {
+                const shortDesc =
+                  event?.description && event.description.length > 25
+                    ? event.description.slice(0, 25) + '…'
+                    : event?.description || 'N/A';
+
+                return (
+                  <TableRow
+                    key={event?.id || Math.random()}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={(e) => {
+                      // prevent dialog when clicking buttons
+                      if (e.target.nodeName !== 'BUTTON') handleRowClick(event?.description);
+                    }}
+                  >
+                    <TableCell>{event?.name || '—'}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={event?.status || 'pending'}
+                        color={
+                          event?.status === 'approved'
+                            ? 'success'
+                            : event?.status === 'denied'
+                            ? 'error'
+                            : 'warning'
+                        }
+                        size="small"
+                        sx={{ fontSize: '0.7rem', height: '22px', borderRadius: '0.5rem' }}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const found = barangayList.find((b) => b.id === event?.barangay);
+                        return found ? found.name : event?.barangay || 'N/A';
+                      })()}
+                    </TableCell>
+                    <TableCell>{shortDesc}</TableCell>
+                    <TableCell>
+                      {event?.created_at ? new Date(event.created_at).toLocaleDateString() : '—'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Button
+                        variant="contained"
+                        size="small"
+                        color="success"
+                        sx={{ mr: 1 }}
+                        onClick={() => handleApprove(event?.id)}
+                        disabled={event?.status === 'approved' || approvingId === event?.id || loading}
+                      >
+                        {approvingId === event?.id ? 'Approving...' : 'Approve'}
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        color="error"
+                        onClick={() => handleDeny(event?.id)}
+                        disabled={event?.status === 'denied' || denyingId === event?.id || loading}
+                      >
+                        {denyingId === event?.id ? 'Denying...' : 'Deny'}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -380,6 +379,17 @@ useEffect(() => {
           <Button variant="contained" onClick={handleAddEvent} disabled={addingEvent}>
             {addingEvent ? 'Saving...' : 'Save'}
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Full description dialog */}
+      <Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Event Description</DialogTitle>
+        <DialogContent>
+          <Typography>{selectedDesc}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDesc(false)}>Close</Button>
         </DialogActions>
       </Dialog>
     </Box>

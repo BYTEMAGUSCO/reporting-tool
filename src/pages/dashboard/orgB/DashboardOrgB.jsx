@@ -28,6 +28,11 @@ import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsAct
 
 import GovLogoOnly from './../../reusables/GovLogoOnly';
 
+import ELibraryTab from '../orgA/tabs/ELibraryTab';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+
+
+
 import {
   signOutUser,
   setupTabCloseLogout,
@@ -222,11 +227,10 @@ const DashboardOrgB = () => {
         />
       ),
     },
-    {
-      label: 'Settings',
-      icon: <SettingsIcon sx={{ color: 'black' }} />,
-      component: <Typography sx={{ p: 2 }}>Settings coming soon...</Typography>,
-    },
+      { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
+    
+   
+
   ];
 
   return (

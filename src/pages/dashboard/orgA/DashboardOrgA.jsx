@@ -38,6 +38,9 @@ import EventsTab from './tabs/EventsTab';
 import ChartsTab from './tabs/ChartsTab';
 import NotificationsActiveRoundedIcon from '@mui/icons-material/NotificationsActiveRounded';
 
+import ELibraryTab from './tabs/ELibraryTab';
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
+
 import {
   signOutUser,
   setupTabCloseLogout,
@@ -162,26 +165,29 @@ const DashboardOrgA = () => {
     setSnackbarOpen(false);
   };
 
-  // Tabs with unread count badge on Notifications label
-  const tabs = [
-    { label: 'Overview', icon: <DashboardIcon />, component: <OverviewTab /> },
-    { label: 'Account Management', icon: <PeopleIcon />, component: <ViewAccountsTab /> },
-    { label: 'Form Management', icon: <AssignmentIcon />, component: <FormTabs /> },
-    { label: 'Report Management', icon: <DescriptionIcon />, component: <ViewReportsTab /> },
-    {
-      label: 'Notifications',
-      icon: <NotificationsActiveIcon />,
-      component: (
-        <NotificationsTab
-          notifications={notifications}
-          setNotifications={setNotifications}
-        />
-      ),
-    },
-    { label: 'Charts', icon: <DashboardIcon />, component: <ChartsTab /> },
-    { label: 'Events', icon: <EventIcon />, component: <EventsTab /> },
-    { label: 'Settings', icon: <SettingsIcon />, component: <Typography>Settings</Typography> },
-  ];
+const tabs = [
+  { label: 'Overview', icon: <DashboardIcon />, component: <OverviewTab /> },
+  { label: 'Account Management', icon: <PeopleIcon />, component: <ViewAccountsTab /> },
+  { label: 'Form Management', icon: <AssignmentIcon />, component: <FormTabs /> },
+  { label: 'Report Management', icon: <DescriptionIcon />, component: <ViewReportsTab /> },
+  {
+    label: 'Notifications',
+    icon: <NotificationsActiveIcon />,
+    component: (
+      <NotificationsTab
+        notifications={notifications}
+        setNotifications={setNotifications}
+      />
+    ),
+  },
+  { label: 'Charts', icon: <DashboardIcon />, component: <ChartsTab /> },
+  { label: 'Events', icon: <EventIcon />, component: <EventsTab /> },
+
+  // 🆕 New E-Library tab
+  { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
+
+  
+];
 
   const handleTabChange = (index) => {
     setActiveTab(index);
