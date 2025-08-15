@@ -40,7 +40,13 @@ const EventsTab = () => {
   const [addingEvent, setAddingEvent] = useState(false);
 
   const [openAdd, setOpenAdd] = useState(false);
-  const [newEvent, setNewEvent] = useState({ name: '', description: '', date: '', location: '' });
+  const [newEvent, setNewEvent] = useState({
+    name: '',
+    description: '',
+    dateStart: '',
+    dateEnd: '',
+    location: ''
+  });
 
   const [barangayList, setBarangayList] = useState([]);
 
@@ -148,56 +154,55 @@ const EventsTab = () => {
   };
 
   const handleAddEvent = async () => {
-    if (!newEvent.name.trim() || !newEvent.location.trim() || !newEvent.date.trim()) {
-      await showErrorAlert('Name, Date, and Location are required.');
-      return;
-    }
-    if (!newEvent.description.trim()) {
-      await showErrorAlert('Description is required.');
-      return;
-    }
-    setAddingEvent(true);
+  if (!newEvent.name.trim() || !newEvent.location.trim() || !newEvent.dateStart.trim() || !newEvent.dateEnd.trim()) {
+    await showErrorAlert('Name, Start Date/Time, End Date/Time, and Location are required.');
+    return;
+  }
+  if (!newEvent.description.trim()) {
+    await showErrorAlert('Description is required.');
+    return;
+  }
+  setAddingEvent(true);
 
-    const dateTimeStart = new Date(`${newEvent.date}T09:00:00`).toISOString();
-    const dateTimeEnd = new Date(`${newEvent.date}T17:00:00`).toISOString();
-    const barangayFromSession = getUserBarangay();
+  const barangayFromSession = getUserBarangay();
 
-    const payload = {
-      name: newEvent.name.trim(),
-      location: newEvent.location.trim(),
-      description: newEvent.description.trim(),
-      date_time_start: dateTimeStart,
-      date_time_end: dateTimeEnd,
-      ...(barangayFromSession ? { barangay: barangayFromSession } : {}),
-    };
-
-    try {
-      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events`;
-      const res = await fetch(baseUrl, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to add event');
-      }
-
-      setOpenAdd(false);
-      setNewEvent({ name: '', description: '', date: '', location: '' });
-      await showSuccessAlert('Event added! 🎉');
-      fetchEvents(page);
-    } catch (error) {
-      console.error('Add event failed:', error);
-      await showErrorAlert(`Add event failed: ${error.message}`);
-    } finally {
-      setAddingEvent(false);
-    }
+  const payload = {
+    name: newEvent.name.trim(),
+    location: newEvent.location.trim(),
+    description: newEvent.description.trim(),
+    date_time_start: new Date(newEvent.dateStart).toISOString(),
+    date_time_end: new Date(newEvent.dateEnd).toISOString(),
+    ...(barangayFromSession ? { barangay: barangayFromSession } : {}),
   };
+
+  try {
+    const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events`;
+    const res = await fetch(baseUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to add event');
+    }
+
+    setOpenAdd(false);
+    setNewEvent({ name: '', description: '', dateStart: '', dateEnd: '', location: '' });
+    await showSuccessAlert('Event added! 🎉');
+    fetchEvents(page);
+  } catch (error) {
+    console.error('Add event failed:', error);
+    await showErrorAlert(`Add event failed: ${error.message}`);
+  } finally {
+    setAddingEvent(false);
+  }
+};
+
 
   const handleRowClick = (desc) => setSelectedDesc(desc || 'No description') || setOpenDesc(true);
 
@@ -290,7 +295,15 @@ const EventsTab = () => {
                     </TableCell>
                     <TableCell>{shortDesc}</TableCell>
                     <TableCell>
-                      {event?.created_at ? new Date(event.created_at).toLocaleDateString() : '—'}
+                      {event?.date_time_start && event?.date_time_end
+                        ? `${new Date(event.date_time_start).toLocaleString([], { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short' 
+                          })} - ${new Date(event.date_time_end).toLocaleString([], { 
+                            dateStyle: 'medium', 
+                            timeStyle: 'short' 
+                          })}`
+                        : '—'}
                     </TableCell>
                     <TableCell align="right">
                       <Button
@@ -354,15 +367,27 @@ const EventsTab = () => {
             disabled={addingEvent}
           />
           <TextField
-            label="Date"
-            type="date"
-            fullWidth
-            margin="dense"
-            InputLabelProps={{ shrink: true }}
-            value={newEvent.date}
-            onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-            disabled={addingEvent}
-          />
+              label="Start Date & Time"
+              type="datetime-local"
+              fullWidth
+              margin="dense"
+              InputLabelProps={{ shrink: true }}
+              value={newEvent.dateStart}
+              onChange={(e) => setNewEvent({ ...newEvent, dateStart: e.target.value })}
+              disabled={addingEvent}
+            />
+
+            <TextField
+              label="End Date & Time"
+              type="datetime-local"
+              fullWidth
+              margin="dense"
+              InputLabelProps={{ shrink: true }}
+              value={newEvent.dateEnd}
+              onChange={(e) => setNewEvent({ ...newEvent, dateEnd: e.target.value })}
+              disabled={addingEvent}
+            />
+
           <TextField
             label="Location"
             fullWidth

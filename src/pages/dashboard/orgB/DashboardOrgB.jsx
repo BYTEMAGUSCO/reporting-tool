@@ -31,6 +31,10 @@ import GovLogoOnly from './../../reusables/GovLogoOnly';
 import ELibraryTab from '../orgA/tabs/ELibraryTab';
 import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 
+import EventListTab from './tabs/EventListTab';
+import EventNoteIcon from '@mui/icons-material/EventNote';
+
+
 
 
 import {
@@ -211,6 +215,11 @@ const DashboardOrgB = () => {
       component: <CreateReportTab />,
     },
     {
+      label: 'Events',
+      icon: <EventNoteIcon sx={{ color: 'black' }} />,
+      component: <EventListTab />,
+    },
+    {
       label: (
         <>
           Notifications{' '}
@@ -230,7 +239,6 @@ const DashboardOrgB = () => {
       { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
     
    
-
   ];
 
   return (
