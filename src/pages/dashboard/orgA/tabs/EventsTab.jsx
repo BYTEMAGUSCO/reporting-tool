@@ -166,14 +166,22 @@ const EventsTab = () => {
 
   const barangayFromSession = getUserBarangay();
 
-  const payload = {
-    name: newEvent.name.trim(),
-    location: newEvent.location.trim(),
-    description: newEvent.description.trim(),
-    date_time_start: new Date(newEvent.dateStart).toISOString(),
-    date_time_end: new Date(newEvent.dateEnd).toISOString(),
-    ...(barangayFromSession ? { barangay: barangayFromSession } : {}),
-  };
+// Helper: Keep datetime-local value without timezone shift
+const formatLocalDateTime = (value) => {
+  if (!value) return null;
+  // Ensures seconds are added
+  return value.length === 16 ? `${value}:00` : value;
+};
+
+const payload = {
+  name: newEvent.name.trim(),
+  location: newEvent.location.trim(),
+  description: newEvent.description.trim(),
+  date_time_start: formatLocalDateTime(newEvent.dateStart),
+  date_time_end: formatLocalDateTime(newEvent.dateEnd),
+  ...(barangayFromSession ? { barangay: barangayFromSession } : {}),
+};
+
 
   try {
     const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events`;
