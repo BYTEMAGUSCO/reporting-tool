@@ -17,10 +17,15 @@ import {
   DialogContent,
   DialogActions,
   TextField,
+  MenuItem,
+  Select,
+  InputLabel,
+  FormControl,
 } from '@mui/material';
 import { getStoredToken } from '@/services/SessionManager';
-import { showSuccessAlert, showErrorAlert } from '@/services/alert';  // SweetAlert helpers
+import { showSuccessAlert, showErrorAlert } from '@/services/alert'; // SweetAlert helpers
 import { createClient } from '@supabase/supabase-js';
+
 const PAGE_LIMIT = 8;
 
 const supabase = createClient(
@@ -45,25 +50,29 @@ const EventsTab = () => {
     description: '',
     dateStart: '',
     dateEnd: '',
-    location: ''
+    location: '',
+    barangay: '',
   });
 
   const [barangayList, setBarangayList] = useState([]);
 
-  // Dialog for full description
-  const [openDesc, setOpenDesc] = useState(false);
-  const [selectedDesc, setSelectedDesc] = useState('');
+// Replace these states
+const [openDesc, setOpenDesc] = useState(false);
+const [selectedEvent, setSelectedEvent] = useState(null);
+
 
   useEffect(() => {
     fetchEvents(page);
+    fetchBarangays();
   }, [page]);
 
-  const getUserBarangay = () => {
+  const fetchBarangays = async () => {
     try {
-      const session = JSON.parse(sessionStorage.getItem('session'));
-      return session?.user?.user_metadata?.barangay || null;
-    } catch {
-      return null;
+      const { data, error } = await supabase.from('barangays').select('id, name');
+      if (error) throw error;
+      setBarangayList(data || []);
+    } catch (err) {
+      console.error('[EventsTab] Failed to fetch barangays:', err);
     }
   };
 
@@ -77,7 +86,7 @@ const EventsTab = () => {
         { event: '*', schema: 'public', table: 'events' },
         async () => fetchEvents(page)
       )
-      .subscribe(status => {
+      .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
           console.log('🔥 Supabase realtime listener for events started!');
         }
@@ -154,65 +163,69 @@ const EventsTab = () => {
   };
 
   const handleAddEvent = async () => {
-  if (!newEvent.name.trim() || !newEvent.location.trim() || !newEvent.dateStart.trim() || !newEvent.dateEnd.trim()) {
-    await showErrorAlert('Name, Start Date/Time, End Date/Time, and Location are required.');
-    return;
-  }
-  if (!newEvent.description.trim()) {
-    await showErrorAlert('Description is required.');
-    return;
-  }
-  setAddingEvent(true);
-
-  const barangayFromSession = getUserBarangay();
-
-// Helper: Keep datetime-local value without timezone shift
-const formatLocalDateTime = (value) => {
-  if (!value) return null;
-  // Ensures seconds are added
-  return value.length === 16 ? `${value}:00` : value;
-};
-
-const payload = {
-  name: newEvent.name.trim(),
-  location: newEvent.location.trim(),
-  description: newEvent.description.trim(),
-  date_time_start: formatLocalDateTime(newEvent.dateStart),
-  date_time_end: formatLocalDateTime(newEvent.dateEnd),
-  ...(barangayFromSession ? { barangay: barangayFromSession } : {}),
-};
-
-
-  try {
-    const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events`;
-    const res = await fetch(baseUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to add event');
+    if (
+      !newEvent.name.trim() ||
+      !newEvent.location.trim() ||
+      !newEvent.dateStart.trim() ||
+      !newEvent.dateEnd.trim() ||
+      !newEvent.barangay
+    ) {
+      await showErrorAlert('Name, Start/End DateTime, Location, and Barangay are required.');
+      return;
     }
+    if (!newEvent.description.trim()) {
+      await showErrorAlert('Description is required.');
+      return;
+    }
+    setAddingEvent(true);
 
-    setOpenAdd(false);
-    setNewEvent({ name: '', description: '', dateStart: '', dateEnd: '', location: '' });
-    await showSuccessAlert('Event added! 🎉');
-    fetchEvents(page);
-  } catch (error) {
-    console.error('Add event failed:', error);
-    await showErrorAlert(`Add event failed: ${error.message}`);
-  } finally {
-    setAddingEvent(false);
-  }
+    const formatLocalDateTime = (value) => {
+      if (!value) return null;
+      return value.length === 16 ? `${value}:00` : value;
+    };
+
+    const payload = {
+      name: newEvent.name.trim(),
+      location: newEvent.location.trim(),
+      description: newEvent.description.trim(),
+      date_time_start: formatLocalDateTime(newEvent.dateStart),
+      date_time_end: formatLocalDateTime(newEvent.dateEnd),
+      barangay: newEvent.barangay,
+    };
+
+    try {
+      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events`;
+      const res = await fetch(baseUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to add event');
+      }
+
+      setOpenAdd(false);
+      setNewEvent({ name: '', description: '', dateStart: '', dateEnd: '', location: '', barangay: '' });
+      await showSuccessAlert('Event added! 🎉');
+      fetchEvents(page);
+    } catch (error) {
+      console.error('Add event failed:', error);
+      await showErrorAlert(`Add event failed: ${error.message}`);
+    } finally {
+      setAddingEvent(false);
+    }
+  };
+
+  const handleRowClick = (event) => {
+  setSelectedEvent(event);
+  setOpenDesc(true);
 };
 
-
-  const handleRowClick = (desc) => setSelectedDesc(desc || 'No description') || setOpenDesc(true);
 
   return (
     <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
@@ -275,11 +288,11 @@ const payload = {
                     key={event?.id || Math.random()}
                     hover
                     sx={{ cursor: 'pointer' }}
+                   // Inside your TableRow onClick
                     onClick={(e) => {
-                      // prevent dialog when clicking buttons
-                      if (e.target.nodeName !== 'BUTTON') handleRowClick(event?.description);
+                      if (e.target.nodeName !== 'BUTTON') handleRowClick(event);
                     }}
-                  >
+                                      >
                     <TableCell>{event?.name || '—'}</TableCell>
                     <TableCell>
                       <Chip
@@ -304,12 +317,12 @@ const payload = {
                     <TableCell>{shortDesc}</TableCell>
                     <TableCell>
                       {event?.date_time_start && event?.date_time_end
-                        ? `${new Date(event.date_time_start).toLocaleString([], { 
-                            dateStyle: 'medium', 
-                            timeStyle: 'short' 
-                          })} - ${new Date(event.date_time_end).toLocaleString([], { 
-                            dateStyle: 'medium', 
-                            timeStyle: 'short' 
+                        ? `${new Date(event.date_time_start).toLocaleString([], {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
+                          })} - ${new Date(event.date_time_end).toLocaleString([], {
+                            dateStyle: 'medium',
+                            timeStyle: 'short',
                           })}`
                         : '—'}
                     </TableCell>
@@ -375,27 +388,25 @@ const payload = {
             disabled={addingEvent}
           />
           <TextField
-              label="Start Date & Time"
-              type="datetime-local"
-              fullWidth
-              margin="dense"
-              InputLabelProps={{ shrink: true }}
-              value={newEvent.dateStart}
-              onChange={(e) => setNewEvent({ ...newEvent, dateStart: e.target.value })}
-              disabled={addingEvent}
-            />
-
-            <TextField
-              label="End Date & Time"
-              type="datetime-local"
-              fullWidth
-              margin="dense"
-              InputLabelProps={{ shrink: true }}
-              value={newEvent.dateEnd}
-              onChange={(e) => setNewEvent({ ...newEvent, dateEnd: e.target.value })}
-              disabled={addingEvent}
-            />
-
+            label="Start Date & Time"
+            type="datetime-local"
+            fullWidth
+            margin="dense"
+            InputLabelProps={{ shrink: true }}
+            value={newEvent.dateStart}
+            onChange={(e) => setNewEvent({ ...newEvent, dateStart: e.target.value })}
+            disabled={addingEvent}
+          />
+          <TextField
+            label="End Date & Time"
+            type="datetime-local"
+            fullWidth
+            margin="dense"
+            InputLabelProps={{ shrink: true }}
+            value={newEvent.dateEnd}
+            onChange={(e) => setNewEvent({ ...newEvent, dateEnd: e.target.value })}
+            disabled={addingEvent}
+          />
           <TextField
             label="Location"
             fullWidth
@@ -404,6 +415,21 @@ const payload = {
             onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
             disabled={addingEvent}
           />
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Barangay</InputLabel>
+            <Select
+              value={newEvent.barangay}
+              onChange={(e) => setNewEvent({ ...newEvent, barangay: e.target.value })}
+              disabled={addingEvent}
+              label="Barangay"
+            >
+              {barangayList.map((b) => (
+                <MenuItem key={b.id} value={b.id}>
+                  {b.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => !addingEvent && setOpenAdd(false)} disabled={addingEvent}>
@@ -415,16 +441,71 @@ const payload = {
         </DialogActions>
       </Dialog>
 
-      {/* Full description dialog */}
-      <Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Event Description</DialogTitle>
-        <DialogContent>
-          <Typography>{selectedDesc}</Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDesc(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+    // Full Preview Dialog
+<Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
+  <DialogTitle>Event Details</DialogTitle>
+  <DialogContent dividers>
+    {selectedEvent ? (
+      <Box>
+        <Typography variant="h6" gutterBottom>
+          {selectedEvent.name}
+        </Typography>
+        <Typography variant="body2" gutterBottom>
+          <strong>Status:</strong>{' '}
+          <Chip
+            label={selectedEvent?.status || 'pending'}
+            color={
+              selectedEvent?.status === 'approved'
+                ? 'success'
+                : selectedEvent?.status === 'denied'
+                ? 'error'
+                : 'warning'
+            }
+            size="small"
+            sx={{ fontSize: '0.7rem', height: '22px', borderRadius: '0.5rem' }}
+          />
+        </Typography>
+        <Typography variant="body2" gutterBottom>
+          <strong>Barangay:</strong>{' '}
+          {barangayList.find((b) => b.id === selectedEvent?.barangay)?.name || 'N/A'}
+        </Typography>
+        <Typography variant="body2" gutterBottom>
+          <strong>Location:</strong> {selectedEvent.location || 'N/A'}
+        </Typography>
+        <Typography variant="body2" gutterBottom>
+          <strong>Start:</strong>{' '}
+          {selectedEvent.date_time_start
+            ? new Date(selectedEvent.date_time_start).toLocaleString([], {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })
+            : '—'}
+        </Typography>
+        <Typography variant="body2" gutterBottom>
+          <strong>End:</strong>{' '}
+          {selectedEvent.date_time_end
+            ? new Date(selectedEvent.date_time_end).toLocaleString([], {
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })
+            : '—'}
+        </Typography>
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="body2">
+          <strong>Description:</strong>
+        </Typography>
+        <Typography variant="body1" sx={{ whiteSpace: 'pre-line' }}>
+          {selectedEvent.description || 'No description'}
+        </Typography>
+      </Box>
+    ) : (
+      <Typography>No event selected</Typography>
+    )}
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => setOpenDesc(false)}>Close</Button>
+  </DialogActions>
+</Dialog>
     </Box>
   );
 };
