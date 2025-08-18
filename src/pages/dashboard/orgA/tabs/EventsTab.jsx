@@ -139,28 +139,37 @@ const [selectedEvent, setSelectedEvent] = useState(null);
       setApprovingId(null);
     }
   };
+const handleDeny = async (id) => {
+  setDenyingId(id);
+  try {
+    const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events/deny/${id}`;
+    const res = await fetch(baseUrl, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  const handleDeny = async (id) => {
-    setDenyingId(id);
-    try {
-      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events/deny/${id}`;
-      const res = await fetch(baseUrl, {
-        method: 'PATCH',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to deny event');
+    if (!res.ok) {
+      let errMessage = 'Failed to deny event';
+      try {
+        const errJson = await res.clone().json(); // clone allows another read if needed
+        errMessage = errJson.error || JSON.stringify(errJson) || errMessage;
+      } catch {
+        // fallback if JSON parse fails
+        errMessage = `HTTP ${res.status} — Could not parse error details`;
       }
-      await showSuccessAlert('Event denied!');
-      fetchEvents(page);
-    } catch (error) {
-      console.error('Deny failed:', error);
-      await showErrorAlert(`Deny failed: ${error.message}`);
-    } finally {
-      setDenyingId(null);
+      throw new Error(errMessage);
     }
-  };
+
+    await showSuccessAlert('Event denied!');
+    fetchEvents(page);
+  } catch (error) {
+    console.error('Deny failed:', error);
+    await showErrorAlert(`Deny failed: ${error.message}`);
+  } finally {
+    setDenyingId(null);
+  }
+};
+
 
   const handleAddEvent = async () => {
     if (
@@ -440,8 +449,6 @@ const [selectedEvent, setSelectedEvent] = useState(null);
           </Button>
         </DialogActions>
       </Dialog>
-
-    // Full Preview Dialog
 <Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
   <DialogTitle>Event Details</DialogTitle>
   <DialogContent dividers>

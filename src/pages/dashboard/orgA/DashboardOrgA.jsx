@@ -167,7 +167,12 @@ const DashboardOrgA = () => {
 
 const tabs = [
   { label: 'Overview', icon: <DashboardIcon />, component: <OverviewTab /> },
-  { label: 'Account Management', icon: <PeopleIcon />, component: <ViewAccountsTab /> },
+
+  // Only show Account Management for role 'S'
+  ...(userRole === 'S'
+    ? [{ label: 'Account Management', icon: <PeopleIcon />, component: <ViewAccountsTab /> }]
+    : []),
+
   { label: 'Form Management', icon: <AssignmentIcon />, component: <FormTabs /> },
   { label: 'Report Management', icon: <DescriptionIcon />, component: <ViewReportsTab /> },
   {
@@ -182,12 +187,9 @@ const tabs = [
   },
   { label: 'Charts', icon: <DashboardIcon />, component: <ChartsTab /> },
   { label: 'Events', icon: <EventIcon />, component: <EventsTab /> },
-
-  // 🆕 New E-Library tab
   { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
-
-  
 ];
+
 
   const handleTabChange = (index) => {
     setActiveTab(index);

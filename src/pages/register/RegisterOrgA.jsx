@@ -178,42 +178,33 @@ const RegisterOrgA = () => {
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
           />
 
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <FormControl
-              fullWidth
-              size="small"
-              margin="dense"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
-            >
-              <InputLabel id="country-code-label">Country Code</InputLabel>
-              <Select
-                labelId="country-code-label"
-                name="country_code"
-                value={formData.country_code}
-                label="Country Code"
-                onChange={handleChange}
-              >
-                <MenuItem value="+63">🇵🇭 +63</MenuItem>
-                <MenuItem value="+1">🇺🇸 +1</MenuItem>
-                <MenuItem value="+44">🇬🇧 +44</MenuItem>
-                {/* Add more if needed */}
-              </Select>
-            </FormControl>
+      <Box sx={{ display: 'flex', gap: 1 }}>
+  <TextField
+    label="Country Code"
+    value="+63"
+    size="small"
+    disabled
+    sx={{
+      width: '110px',
+      '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' },
+    }}
+  />
 
-            <TextField
-              label="Phone Number"
-              name="requester_phone"
-              type="tel"
-              size="small"
-              fullWidth
-              value={formData.requester_phone}
-              onChange={handleChange}
-              error={!!errors.requester_phone}
-              helperText={errors.requester_phone || 'Exclude country code'}
-              margin="dense"
-              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
-            />
-          </Box>
+  <TextField
+    label="Phone Number"
+    name="requester_phone"
+    type="tel"
+    size="small"
+    fullWidth
+    value={formData.requester_phone}
+    onChange={handleChange}
+    error={!!errors.requester_phone}
+    helperText={errors.requester_phone || 'Exclude country code'}
+    margin="dense"
+    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+  />
+</Box>
+
 
           <FormControl
             fullWidth
