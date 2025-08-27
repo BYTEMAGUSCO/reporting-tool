@@ -2,8 +2,14 @@ import { Table, TableHead, TableRow, TableCell, TableBody, Skeleton, Typography 
 import EventRow from "./EventRow";
 
 const EventsTable = ({ events, barangayList, loading, PAGE_LIMIT, handleApprove, handleDeny, approvingId, denyingId, onRowClick }) => {
+  // Log raw events for debugging
+  console.log("[EventsTable] Raw events passed in:", events);
+
   // Only keep pending events
-  const pendingEvents = events.filter((event) => event.status === "pending");
+  const pendingEvents = events.filter((event) => event.status === "P");
+
+  // Log filtered events for debugging
+  console.log("[EventsTable] Pending events to display:", pendingEvents);
 
   return (
     <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>

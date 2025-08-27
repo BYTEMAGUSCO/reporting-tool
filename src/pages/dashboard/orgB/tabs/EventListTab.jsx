@@ -28,6 +28,13 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+// Example mapping of barangay IDs to friendly names
+const BARANGAY_NAMES = {
+  "a3add548-2835-4180-b47c-124f54e0cbb3": "Pamplona",
+  "some-other-id": "Tonet",
+  // Add all your barangays here
+};
+
 const EventsTab = () => {
   const token = getStoredToken();
   const [page, setPage] = useState(1);
@@ -37,21 +44,38 @@ const EventsTab = () => {
   const [openDesc, setOpenDesc] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState('');
 
-  useEffect(() => {
-    fetchEvents(page);
-  }, [page]);
+  // 🆕 user info
+  const [userBarangay, setUserBarangay] = useState(null);
+  const [userRole, setUserRole] = useState(null);
 
   useEffect(() => {
-    if (!token) return;
+    try {
+      const session = JSON.parse(sessionStorage.getItem('session'));
+      const fetchedUser = session?.user;
+      if (fetchedUser) {
+        const metadata = fetchedUser.user_metadata || {};
+        setUserBarangay(metadata.barangay || null);
+        setUserRole(metadata.role || fetchedUser.role || null);
+      }
+    } catch (err) {
+      console.error("[EventsTab] Failed to parse session:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userRole) fetchEvents(page);
+  }, [page, userRole, userBarangay]);
+
+  useEffect(() => {
+    if (!token || !userRole) return;
     const channel = supabase
       .channel('realtime:events')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'events' },
         async () => fetchEvents(page)
       )
       .subscribe();
-
     return () => supabase.removeChannel(channel);
-  }, [token, page]);
+  }, [token, page, userRole, userBarangay]);
 
   const fetchEvents = async (pageNumber = 1) => {
     setLoading(true);
@@ -60,20 +84,28 @@ const EventsTab = () => {
       const url = `${baseUrl}/events?page=${pageNumber}&limit=${PAGE_LIMIT}`;
       console.log(`[EventsTab] Fetching events from: ${url}`);
 
-      const res = await fetch(url, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       console.log("[EventsTab] Raw fetch response:", data);
 
       if (res.ok) {
-        const list = Array.isArray(data.data) ? data.data : [];
-        console.log(`[EventsTab] Processed events list (page ${pageNumber}):`, list);
-        console.log(`[EventsTab] Total events count:`, data.total);
+        let list = Array.isArray(data.data) ? data.data : [];
+
+        // 🏘️ Filter by user barangay if role is Barangay
+        if (userRole === 'B' && userBarangay) {
+          list = list.filter(ev => ev.barangay === userBarangay);
+        }
+
+        // Map barangay IDs to friendly names for display
+        list = list.map(ev => ({
+          ...ev,
+          barangay_name: BARANGAY_NAMES[ev.barangay] || ev.barangay
+        }));
+
+        console.log("[EventsTab] Processed events list:", list);
 
         setEventsList(list);
-        setTotalPages(Math.ceil((data.total || 0) / PAGE_LIMIT));
+        setTotalPages(Math.ceil((list.length || 0) / PAGE_LIMIT));
       } else {
         await showErrorAlert(data.error || 'Failed to fetch events');
       }
@@ -137,6 +169,9 @@ const EventsTab = () => {
         <Typography variant="body2" color="text.secondary" mt={0.5}>
           {event.location || 'Unknown Location'}
         </Typography>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>
+          🏘️ {event.barangay_name}
+        </Typography>
         <Stack direction="row" spacing={1} mt={1} alignItems="center">
           <EventIcon fontSize="small" color="primary" />
           <Typography variant="caption" color="text.secondary">
@@ -167,7 +202,6 @@ const EventsTab = () => {
       </Typography>
       <Divider sx={{ mb: 2 }} />
 
-      {/* Ongoing Events */}
       <SectionHeader icon={AccessTimeIcon} title="Ongoing Events" />
       <Box display="flex" flexDirection="column" gap={2} mb={3}>
         {loading
@@ -179,7 +213,6 @@ const EventsTab = () => {
           : ongoingEvents.map(renderEventCard)}
       </Box>
 
-      {/* Upcoming Events */}
       <SectionHeader icon={EventIcon} title="Upcoming Events" />
       <Box display="flex" flexDirection="column" gap={2} mb={3}>
         {loading
@@ -191,7 +224,6 @@ const EventsTab = () => {
           : upcomingEvents.map(renderEventCard)}
       </Box>
 
-      {/* Past Events */}
       <SectionHeader icon={HistoryIcon} title="Past Events" />
       <Box display="flex" flexDirection="column" gap={2}>
         {loading
@@ -203,7 +235,6 @@ const EventsTab = () => {
           : pastEvents.map(renderEventCard)}
       </Box>
 
-      {/* Pagination */}
       <Box display="flex" justifyContent="center" mt={3}>
         <Pagination
           count={totalPages}
@@ -214,7 +245,6 @@ const EventsTab = () => {
         />
       </Box>
 
-      {/* Dialog */}
       <Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Event Description</DialogTitle>
         <DialogContent>
