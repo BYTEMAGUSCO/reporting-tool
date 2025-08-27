@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Chip,
-  Skeleton,
-  Pagination,
-  Divider,
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Stack
+  Box, Typography, Card, CardContent, Chip, Skeleton, Pagination, Divider,
+  Button, Dialog, DialogTitle, DialogContent, DialogActions, Stack
 } from '@mui/material';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EventIcon from '@mui/icons-material/Event';
@@ -28,13 +16,6 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-// Example mapping of barangay IDs to friendly names
-const BARANGAY_NAMES = {
-  "a3add548-2835-4180-b47c-124f54e0cbb3": "Pamplona",
-  "some-other-id": "Tonet",
-  // Add all your barangays here
-};
-
 const EventsTab = () => {
   const token = getStoredToken();
   const [page, setPage] = useState(1);
@@ -43,10 +24,9 @@ const EventsTab = () => {
   const [loading, setLoading] = useState(false);
   const [openDesc, setOpenDesc] = useState(false);
   const [selectedDesc, setSelectedDesc] = useState('');
-
-  // 🆕 user info
   const [userBarangay, setUserBarangay] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [barangays, setBarangays] = useState({}); // dynamic map of barangay IDs → names
 
   useEffect(() => {
     try {
@@ -62,9 +42,25 @@ const EventsTab = () => {
     }
   }, []);
 
+  // fetch barangays dynamically
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const { data, error } = await supabase.from('barangays').select('id,name');
+        if (error) throw error;
+        const map = {};
+        data.forEach(b => { map[b.id] = b.name; });
+        setBarangays(map);
+      } catch (err) {
+        console.error("[EventsTab] Failed to fetch barangays:", err);
+      }
+    };
+    fetchBarangays();
+  }, []);
+
   useEffect(() => {
     if (userRole) fetchEvents(page);
-  }, [page, userRole, userBarangay]);
+  }, [page, userRole, userBarangay, barangays]);
 
   useEffect(() => {
     if (!token || !userRole) return;
@@ -82,27 +78,22 @@ const EventsTab = () => {
     try {
       const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
       const url = `${baseUrl}/events?page=${pageNumber}&limit=${PAGE_LIMIT}`;
-      console.log(`[EventsTab] Fetching events from: ${url}`);
 
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      console.log("[EventsTab] Raw fetch response:", data);
 
       if (res.ok) {
         let list = Array.isArray(data.data) ? data.data : [];
 
-        // 🏘️ Filter by user barangay if role is Barangay
         if (userRole === 'B' && userBarangay) {
           list = list.filter(ev => ev.barangay === userBarangay);
         }
 
-        // Map barangay IDs to friendly names for display
+        // map dynamic full names
         list = list.map(ev => ({
           ...ev,
-          barangay_name: BARANGAY_NAMES[ev.barangay] || ev.barangay
+          barangay_name: barangays[ev.barangay] || ev.barangay
         }));
-
-        console.log("[EventsTab] Processed events list:", list);
 
         setEventsList(list);
         setTotalPages(Math.ceil((list.length || 0) / PAGE_LIMIT));
@@ -127,61 +118,31 @@ const EventsTab = () => {
   const approvedEvents = eventsList.filter(event => event.status === 'A');
 
   const ongoingEvents = approvedEvents
-    .filter(event => {
-      const start = new Date(event.date_time_start);
-      const end = new Date(event.date_time_end);
-      return start <= now && now <= end;
-    })
+    .filter(ev => { const s = new Date(ev.date_time_start); const e = new Date(ev.date_time_end); return s <= now && now <= e; })
     .sort((a, b) => new Date(a.date_time_start) - new Date(b.date_time_start));
 
   const upcomingEvents = approvedEvents
-    .filter(event => new Date(event.date_time_start) > now)
+    .filter(ev => new Date(ev.date_time_start) > now)
     .sort((a, b) => new Date(a.date_time_start) - new Date(b.date_time_start));
 
   const pastEvents = approvedEvents
-    .filter(event => new Date(event.date_time_end) < now)
+    .filter(ev => new Date(ev.date_time_end) < now)
     .sort((a, b) => new Date(b.date_time_end) - new Date(a.date_time_end));
 
   const renderEventCard = (event) => (
-    <Card
-      key={event.id}
-      sx={{
-        width: '100%',
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-        cursor: 'pointer',
-        transition: '0.2s',
-        '&:hover': { boxShadow: 4, transform: 'scale(1.01)' },
-      }}
-      onClick={() => {
-        setSelectedDesc(event?.description || 'No description available');
-        setOpenDesc(true);
-      }}
-    >
+    <Card key={event.id} sx={{ width: '100%', borderRadius: 2, border: '1px solid', borderColor: 'divider', cursor: 'pointer', transition: '0.2s', '&:hover': { boxShadow: 4, transform: 'scale(1.01)' } }}
+      onClick={() => { setSelectedDesc(event?.description || 'No description available'); setOpenDesc(true); }}>
       <CardContent>
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" fontWeight="bold">
-            {event.name || 'Untitled Event'}
-          </Typography>
+          <Typography variant="h6" fontWeight="bold">{event.name || 'Untitled Event'}</Typography>
           {getStatusChip(event.status)}
         </Box>
-        <Typography variant="body2" color="text.secondary" mt={0.5}>
-          {event.location || 'Unknown Location'}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" mt={0.5}>
-          🏘️ {event.barangay_name}
-        </Typography>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>{event.location || 'Unknown Location'}</Typography>
+        <Typography variant="body2" color="text.secondary" mt={0.5}>🏘️ {event.barangay_name}</Typography>
         <Stack direction="row" spacing={1} mt={1} alignItems="center">
           <EventIcon fontSize="small" color="primary" />
           <Typography variant="caption" color="text.secondary">
-            {event?.date_time_start
-              ? new Date(event.date_time_start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
-              : '—'}
-            {" "}to{" "}
-            {event?.date_time_end
-              ? new Date(event.date_time_end).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
-              : '—'}
+            {event?.date_time_start ? new Date(event.date_time_start).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'} to {event?.date_time_end ? new Date(event.date_time_end).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
           </Typography>
         </Stack>
       </CardContent>
@@ -197,52 +158,32 @@ const EventsTab = () => {
 
   return (
     <Box sx={{ px: 2, py: 2 }}>
-      <Typography variant="h5" fontWeight="bold" mb={1}>
-        Events Management
-      </Typography>
+      <Typography variant="h5" fontWeight="bold" mb={1}>Events Management</Typography>
       <Divider sx={{ mb: 2 }} />
 
       <SectionHeader icon={AccessTimeIcon} title="Ongoing Events" />
       <Box display="flex" flexDirection="column" gap={2} mb={3}>
-        {loading
-          ? Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-              <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />
-            ))
-          : ongoingEvents.length === 0
-          ? <Typography variant="body2" align="center">No ongoing events.</Typography>
-          : ongoingEvents.map(renderEventCard)}
+        {loading ? Array.from({ length: PAGE_LIMIT }).map((_, i) => <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />) :
+          ongoingEvents.length === 0 ? <Typography variant="body2" align="center">No ongoing events.</Typography> :
+            ongoingEvents.map(renderEventCard)}
       </Box>
 
       <SectionHeader icon={EventIcon} title="Upcoming Events" />
       <Box display="flex" flexDirection="column" gap={2} mb={3}>
-        {loading
-          ? Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-              <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />
-            ))
-          : upcomingEvents.length === 0
-          ? <Typography variant="body2" align="center">No upcoming events.</Typography>
-          : upcomingEvents.map(renderEventCard)}
+        {loading ? Array.from({ length: PAGE_LIMIT }).map((_, i) => <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />) :
+          upcomingEvents.length === 0 ? <Typography variant="body2" align="center">No upcoming events.</Typography> :
+            upcomingEvents.map(renderEventCard)}
       </Box>
 
       <SectionHeader icon={HistoryIcon} title="Past Events" />
       <Box display="flex" flexDirection="column" gap={2}>
-        {loading
-          ? Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-              <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />
-            ))
-          : pastEvents.length === 0
-          ? <Typography variant="body2" align="center">No past events.</Typography>
-          : pastEvents.map(renderEventCard)}
+        {loading ? Array.from({ length: PAGE_LIMIT }).map((_, i) => <Skeleton key={i} variant="rectangular" height={110} sx={{ borderRadius: 2 }} />) :
+          pastEvents.length === 0 ? <Typography variant="body2" align="center">No past events.</Typography> :
+            pastEvents.map(renderEventCard)}
       </Box>
 
       <Box display="flex" justifyContent="center" mt={3}>
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={(_, value) => setPage(value)}
-          color="primary"
-          disabled={loading}
-        />
+        <Pagination count={totalPages} page={page} onChange={(_, value) => setPage(value)} color="primary" disabled={loading} />
       </Box>
 
       <Dialog open={openDesc} onClose={() => setOpenDesc(false)} maxWidth="sm" fullWidth>
