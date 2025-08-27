@@ -7,6 +7,7 @@ import {
   Paper,
   Stack,
 } from '@mui/material';
+//<Tab icon={<CheckCircleIcon />} iconPosition="start" label="Approved" />
 
 import GroupIcon from '@mui/icons-material/Group';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
@@ -41,7 +42,7 @@ const ViewAccountsTab = () => {
         >
           <Tab icon={<HourglassEmptyIcon />} iconPosition="start" label="Pending" />
           <Tab icon={<CancelIcon />} iconPosition="start" label="Rejected" />
-          <Tab icon={<CheckCircleIcon />} iconPosition="start" label="Approved" />
+          
         </Tabs>
       </Paper>
 
