@@ -7,13 +7,17 @@ import {
   ListItemText,
   Skeleton,
   Fade,
-  Button,
+  IconButton,
   Stack,
+  Tooltip,
+  Chip,
 } from '@mui/material';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import ArchiveIcon from '@mui/icons-material/Archive';
+import AllInboxIcon from '@mui/icons-material/AllInbox';
+import MarkunreadIcon from '@mui/icons-material/Markunread';
 import { createClient } from '@supabase/supabase-js';
-import CheckIcon from '@mui/icons-material/Check';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -24,7 +28,7 @@ const NotificationsTab = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [tab, setTab] = useState("all"); // "all" | "unread" | "archived"
 
   const storedSession = sessionStorage.getItem('session');
   const parsedSession = storedSession ? JSON.parse(storedSession) : null;
@@ -37,7 +41,7 @@ const NotificationsTab = () => {
   const userId =
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
 
-  // Stable fetchNotifications wrapped in useCallback
+  // Fetch notifications from API
   const fetchNotifications = useCallback(async () => {
     if (!token) return;
     setLoading(true);
@@ -46,8 +50,6 @@ const NotificationsTab = () => {
         userRole === 'B' && userId
           ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications/${userId}`
           : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications`;
-
-      console.log('🔥 Fetching notifications from URL:', url);
 
       const res = await fetch(url, {
         headers: {
@@ -59,7 +61,6 @@ const NotificationsTab = () => {
       if (!res.ok) throw new Error(await res.text());
 
       const { data } = await res.json();
-      console.log('💬 Notifications fetched:', data);
       setNotifications(data || []);
       setError(null);
     } catch (err) {
@@ -70,22 +71,19 @@ const NotificationsTab = () => {
     }
   }, [token, userRole, userId]);
 
-  // Fetch on mount
   useEffect(() => {
     fetchNotifications();
   }, [fetchNotifications]);
 
-  // Realtime subscription — stable, only depends on token
+  // realtime refresh
   useEffect(() => {
     if (!token) return;
-
     const channel = supabase
       .channel('realtime:notifications')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications' },
-        (payload) => {
-          console.log('Realtime event:', payload);
+        () => {
           fetchNotifications();
         }
       )
@@ -119,12 +117,43 @@ const NotificationsTab = () => {
     }
   };
 
-  const filteredNotifications = showUnreadOnly
-    ? notifications.filter((n) => !n.is_viewed)
-    : notifications;
+  const handleArchive = async (id) => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications/${id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ is_archived: true }),
+        }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const { data } = await res.json();
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? data[0] : n))
+      );
+    } catch (err) {
+      console.error('❌ Error archiving notification:', err);
+    }
+  };
 
-  const unreadCount = notifications.filter((n) => !n.is_viewed).length;
-  const readCount = notifications.length - unreadCount;
+  // counts
+  const unreadCount = notifications.filter((n) => !n.is_viewed && !n.is_archived).length;
+  const readCount = notifications.filter((n) => n.is_viewed && !n.is_archived).length;
+  const archivedCount = notifications.filter((n) => n.is_archived).length;
+
+  // filtered view
+  let filteredNotifications = [];
+  if (tab === "all") {
+    filteredNotifications = notifications.filter((n) => !n.is_archived);
+  } else if (tab === "unread") {
+    filteredNotifications = notifications.filter((n) => !n.is_viewed && !n.is_archived);
+  } else if (tab === "archived") {
+    filteredNotifications = notifications.filter((n) => n.is_archived);
+  }
 
   return (
     <Box sx={{ p: 2 }}>
@@ -141,36 +170,35 @@ const NotificationsTab = () => {
         Your Notifications
       </Typography>
 
-      <Stack direction="row" spacing={2} sx={{ mb: 1 }}>
-        <Typography variant="body2" color="text.secondary">
-          Read: {readCount}
-        </Typography>
-        <Typography variant="body2" color="error" sx={{ fontWeight: 'bold' }}>
-          Unread: {unreadCount}
-        </Typography>
-      </Stack>
-
+      {/* Tabs */}
       <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
-        <Button
-          variant={showUnreadOnly === false ? 'contained' : 'outlined'}
-          color="primary"
-          onClick={() => setShowUnreadOnly(false)}
-          endIcon={
-            showUnreadOnly === false ? <CheckIcon sx={{ fontSize: 18 }} /> : null
-          }
-        >
-          All
-        </Button>
-        <Button
-          variant={showUnreadOnly === true ? 'contained' : 'outlined'}
-          color="primary"
-          onClick={() => setShowUnreadOnly((prev) => !prev)}
-          endIcon={
-            showUnreadOnly === true ? <CheckIcon sx={{ fontSize: 18 }} /> : null
-          }
-        >
-          Unread
-        </Button>
+        <Tooltip title="All Notifications">
+          <Chip
+            icon={<AllInboxIcon />}
+            label={`All (${readCount + unreadCount})`}
+            color={tab === "all" ? "primary" : "default"}
+            onClick={() => setTab("all")}
+            clickable
+          />
+        </Tooltip>
+        <Tooltip title="Unread">
+          <Chip
+            icon={<MarkunreadIcon />}
+            label={`Unread (${unreadCount})`}
+            color={tab === "unread" ? "primary" : "default"}
+            onClick={() => setTab("unread")}
+            clickable
+          />
+        </Tooltip>
+        <Tooltip title="Archived">
+          <Chip
+            icon={<ArchiveIcon />}
+            label={`Archived (${archivedCount})`}
+            color={tab === "archived" ? "primary" : "default"}
+            onClick={() => setTab("archived")}
+            clickable
+          />
+        </Tooltip>
       </Stack>
 
       {loading ? (
@@ -179,8 +207,8 @@ const NotificationsTab = () => {
             <Skeleton
               key={i}
               variant="rectangular"
-              height={50}
-              sx={{ mb: 1, borderRadius: 1 }}
+              height={60}
+              sx={{ mb: 1, borderRadius: 2 }}
             />
           ))}
         </>
@@ -193,17 +221,17 @@ const NotificationsTab = () => {
           {filteredNotifications.map((n) => (
             <Fade in key={n.id} timeout={500}>
               <ListItem
-                button={!n.is_viewed}
-                onClick={() => !n.is_viewed && markAsViewed(n.id)}
+                button={tab !== "archived" && !n.is_viewed}
+                onClick={() => tab !== "archived" && !n.is_viewed && markAsViewed(n.id)}
                 sx={{
                   border: '1px solid #eee',
                   borderRadius: 2,
                   mb: 1,
-                  backgroundColor: n.is_viewed ? '#f9f9f9' : '#fffdf8',
+                  backgroundColor: n.is_viewed ? '#f9f9f9' : '#fffef6',
                   boxShadow: n.is_viewed ? 0 : 1,
-                  cursor: n.is_viewed ? 'default' : 'pointer',
                   position: 'relative',
-                  pr: 5,
+                  alignItems: "flex-start",
+                  py: 1.5,
                 }}
               >
                 <ListItemText
@@ -231,17 +259,29 @@ const NotificationsTab = () => {
                   }
                 />
 
-                {!n.is_viewed && (
+                {/* Unread red dot */}
+                {tab !== "archived" && !n.is_viewed && (
                   <FiberManualRecordIcon
                     color="error"
                     fontSize="small"
-                    sx={{
-                      position: 'absolute',
-                      right: 10,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                    }}
+                    sx={{ position: 'absolute', top: 12, right: 50 }}
                   />
+                )}
+
+                {/* Archive action */}
+                {tab !== "archived" && (
+                  <Tooltip title="Archive">
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchive(n.id);
+                      }}
+                      sx={{ position: "absolute", right: 8, top: 8 }}
+                    >
+                      <ArchiveIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 )}
               </ListItem>
             </Fade>
@@ -253,8 +293,9 @@ const NotificationsTab = () => {
           color="text.secondary"
           sx={{ textAlign: 'center', mt: 4 }}
         >
-          🎉 You’re all caught up! <br />
-          Go touch grass 🌱 or grab a coffee ☕
+          {tab === "archived"
+            ? "🗄 No archived notifications yet."
+            : "🎉 You’re all caught up! Go touch grass 🌱 or grab a coffee ☕"}
         </Typography>
       )}
     </Box>

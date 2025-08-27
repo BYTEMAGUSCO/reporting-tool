@@ -8,7 +8,10 @@ import {
   MenuItem,
   InputLabel,
   FormControl,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { AccountManager } from '@/services/AccountManager';
 import GovHeader from '../reusables/GovHeader';
 import { useNavigate } from 'react-router-dom';
@@ -30,15 +33,17 @@ const RegisterOrgB = () => {
   const [barangays, setBarangays] = useState([]);
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const fetchBarangays = async () => {
       try {
-        const res = await fetch('https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/barangays');
+        const res = await fetch(
+          'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/barangays'
+        );
         const data = await res.json();
         setBarangays(data);
       } catch (err) {
-        // console.error('Failed to load barangays:', err);
         showErrorAlert('Barangay load fail 🥲', 'Try reloading the page!');
       }
     };
@@ -75,7 +80,10 @@ const RegisterOrgB = () => {
       const result = await accountManager.register(payload);
 
       if (result.success) {
-        showSuccessAlert('Success! Now just wait for Approval 🎉', result.message);
+        showSuccessAlert(
+          'Success! Now just wait for Approval 🎉',
+          result.message
+        );
         setFormData({
           requester_name: '',
           requester_email: '',
@@ -93,7 +101,6 @@ const RegisterOrgB = () => {
         }
       }
     } catch (err) {
-      // console.error('💥 Registration error:', err);
       showErrorAlert('Something went wrong', 'Try again later!');
     } finally {
       setIsLoading(false);
@@ -166,7 +173,7 @@ const RegisterOrgB = () => {
           <TextField
             label="Create Password"
             name="requester_password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             autoComplete="new-password"
             size="small"
             fullWidth
@@ -176,35 +183,46 @@ const RegisterOrgB = () => {
             helperText={errors.requester_password}
             margin="dense"
             sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
 
-    <Box sx={{ display: 'flex', gap: 1 }}>
-  <TextField
-    label="Country Code"
-    value="+63"
-    size="small"
-    disabled
-    sx={{
-      width: '110px',
-      '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' },
-    }}
-  />
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <TextField
+              label="Country Code"
+              value="+63"
+              size="small"
+              disabled
+              sx={{
+                width: '110px',
+                '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' },
+              }}
+            />
 
-  <TextField
-    label="Phone Number"
-    name="requester_phone"
-    type="tel"
-    size="small"
-    fullWidth
-    value={formData.requester_phone}
-    onChange={handleChange}
-    error={!!errors.requester_phone}
-    helperText={errors.requester_phone || 'Exclude country code'}
-    margin="dense"
-    sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
-  />
-</Box>
-
+            <TextField
+              label="Phone Number"
+              name="requester_phone"
+              type="tel"
+              size="small"
+              fullWidth
+              value={formData.requester_phone}
+              onChange={handleChange}
+              error={!!errors.requester_phone}
+              helperText={errors.requester_phone || 'Exclude country code'}
+              margin="dense"
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' } }}
+            />
+          </Box>
 
           <FormControl
             fullWidth

@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { TextField, Button, Alert, Typography } from '@mui/material';
+import {
+  TextField,
+  Button,
+  Alert,
+  Typography,
+  IconButton,
+  InputAdornment,
+} from '@mui/material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AccountManager } from '@/services/AccountManager';
 import GovHeader from '../reusables/GovHeader';
@@ -9,6 +17,7 @@ const LogInOrgA = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -29,24 +38,13 @@ const LogInOrgA = () => {
             : result.message || 'Login failed 🥲';
 
         setError(userFriendlyMessage);
-
-        /*
-        console.warn('🪵 Login Debug Info:', {
-          code: result.code || 'N/A',
-          status: result.status || 'N/A',
-          raw: result.raw || null,
-        });
-        */
-
         return;
       }
 
-      // console.log('🚀 Navigating to dashboard...');
       navigate('/dashboard/orgA/DashboardOrgA');
     } catch (err) {
       setLoading(false);
       setError('Something went really wrong 💀 Please try again.');
-      // console.error('🔥 Unexpected login error:', err);
     }
   };
 
@@ -76,12 +74,13 @@ const LogInOrgA = () => {
             autoComplete="off"
             sx={{
               borderRadius: '0.5rem',
-              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' }
+              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' },
             }}
           />
+
           <TextField
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             fullWidth
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -90,18 +89,24 @@ const LogInOrgA = () => {
             autoComplete="off"
             sx={{
               borderRadius: '0.5rem',
-              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' }
+              '& .MuiOutlinedInput-root': { borderRadius: '0.5rem' },
+            }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
           />
 
           {error && (
-            <Alert
-              severity="error"
-              sx={{
-                mt: '1rem',
-                borderRadius: '0.5rem',
-              }}
-            >
+            <Alert severity="error" sx={{ mt: '1rem', borderRadius: '0.5rem' }}>
               {error}
             </Alert>
           )}
