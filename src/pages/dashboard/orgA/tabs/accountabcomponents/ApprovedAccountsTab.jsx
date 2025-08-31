@@ -11,7 +11,11 @@ import {
   Skeleton,
   Pagination,
   Divider,
+  IconButton,
+  Tooltip,
+  CircularProgress,
 } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
 import useApprovedAccounts from '@/services/useApprovedAccounts';
@@ -20,9 +24,12 @@ import { getBarangays } from '@/services/BarangayService';
 const PAGE_LIMIT = 8;
 
 const ApprovedAccountsTab = () => {
-  const token = JSON.parse(sessionStorage.getItem('session'))?.access_token;
+  const session = JSON.parse(sessionStorage.getItem('session'));
+  const token = session?.access_token;
+  const role = session?.user?.user_metadata?.role;
   const [page, setPage] = useState(1);
   const [barangays, setBarangays] = useState([]);
+  const [deactivating, setDeactivating] = useState(null); // track email being deactivated
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -34,11 +41,16 @@ const ApprovedAccountsTab = () => {
   const { data, loading, refetch } = useApprovedAccounts(token, page, PAGE_LIMIT);
 
   useEffect(() => {
+    if (data?.data) {
+      console.log("[📥 Approved Accounts Raw Data]", data.data);
+    }
+  }, [data]);
+
+  useEffect(() => {
     const fetchBarangays = async () => {
       try {
         const result = await getBarangays(token);
         setBarangays(result);
-        // console.log('[📍 Barangays]', result);
       } catch (err) {
         // console.error('Failed to load barangays', err);
       }
@@ -68,7 +80,9 @@ const ApprovedAccountsTab = () => {
       allAccounts = allAccounts.filter((acc) => acc.requester_role === org);
     }
 
-    allAccounts = allAccounts.filter((acc) => acc.request_status === 'A');
+    allAccounts = allAccounts.filter(
+      (acc) => acc.request_status === "A" && acc.raw_user_meta_data?.status !== "D"
+    );
 
     allAccounts.sort((a, b) => {
       if (sortBy === 'dateCreated') {
@@ -79,6 +93,42 @@ const ApprovedAccountsTab = () => {
 
     return allAccounts;
   }, [data.data, filters]);
+
+  const handleDeactivate = async (acc) => {
+    setDeactivating(acc.requester_email);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-status/deactivate-email/${encodeURIComponent(acc.requester_email)}`;
+
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
+        },
+      });
+
+      const text = await res.text();
+      console.log("[📦 Raw response]", text);
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Response is not JSON — maybe HTML error page?");
+      }
+
+      if (res.ok) {
+        console.log("[✅ Deactivate Success]", data);
+        refetch();
+      } else {
+        console.error("[❌ Deactivate Error]", data);
+      }
+    } catch (err) {
+      console.error("[❌ Deactivate Exception]", err);
+    } finally {
+      setDeactivating(null);
+    }
+  };
 
   return (
     <Box sx={{ px: 2, py: 2, borderRadius: '0.5rem' }}>
@@ -109,13 +159,16 @@ const ApprovedAccountsTab = () => {
               <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
+              {role === "S" && (
+                <TableCell><strong>Actions</strong></TableCell>
+              )}
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array(7).fill().map((_, j) => (
+                  {Array(role === "S" ? 8 : 7).fill().map((_, j) => (
                     <TableCell key={j} sx={{ py: 0.5 }}>
                       <Skeleton variant="text" height={20} />
                     </TableCell>
@@ -124,7 +177,7 @@ const ApprovedAccountsTab = () => {
               ))
             ) : filteredSortedAccounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={role === "S" ? 8 : 7}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
                     No approved accounts found.
                   </Typography>
@@ -153,6 +206,26 @@ const ApprovedAccountsTab = () => {
                       }}
                     />
                   </TableCell>
+                  {role === "S" && (
+                    <TableCell>
+                      <Tooltip title="Deactivate Account">
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeactivate(acc)}
+                            disabled={deactivating === acc.requester_email}
+                          >
+                            {deactivating === acc.requester_email ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <DeleteIcon fontSize="small" />
+                            )}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
