@@ -7,14 +7,13 @@ import {
   Pagination,
 } from "@mui/material";
 import { getStoredToken } from "@/services/SessionManager";
-import { showSuccessAlert, showErrorAlert } from "@/services/alert"; // SweetAlert helpers
+import { showSuccessAlert, showErrorAlert } from "@/services/alert";
 import { createClient } from "@supabase/supabase-js";
 import {
   AddEventDialog,
   EventDetailsDialog,
   EventsTable,
-} from "./EventsTabParts"; // clean import (JS automatically picks up index.js)
-
+} from "./EventsTabParts";
 
 const PAGE_LIMIT = 8;
 
@@ -23,8 +22,20 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
+// Role-based button color
+const getRoleButtonColor = (role) => {
+  switch (role) {
+    case 'S': return '#facc15'; // Super Admin → Yellow
+    case 'D': return '#059669'; // DILG → Green
+    case 'B': return '#2563eb'; // Barangay → Blue
+    default:  return '#64748b'; // Default gray
+  }
+};
+
 const EventsTab = () => {
   const token = getStoredToken();
+  const [userRole, setUserRole] = useState(null);
+
   const [page, setPage] = useState(1);
   const [events, setEvents] = useState([]);
   const [totalPages, setTotalPages] = useState(0);
@@ -34,7 +45,6 @@ const EventsTab = () => {
   const [denyingId, setDenyingId] = useState(null);
   const [addingEvent, setAddingEvent] = useState(false);
 
-  // Add Event Dialog
   const [openAdd, setOpenAdd] = useState(false);
   const [newEvent, setNewEvent] = useState({
     name: "",
@@ -46,10 +56,24 @@ const EventsTab = () => {
   });
 
   const [barangayList, setBarangayList] = useState([]);
-
-  // Event Details Dialog
   const [openDesc, setOpenDesc] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
+
+  // Fetch role from sessionStorage
+  useEffect(() => {
+    try {
+      const session = JSON.parse(sessionStorage.getItem("session"));
+      const fetchedUser = session?.user;
+      if (fetchedUser) {
+        const metadata = fetchedUser.user_metadata || {};
+        const role = metadata.role || fetchedUser.role || "unknown";
+        console.log("[EventsTab] Detected user role:", role);
+        setUserRole(role);
+      }
+    } catch (err) {
+      console.error("[EventsTab] Failed to fetch user role:", err);
+    }
+  }, []);
 
   useEffect(() => {
     fetchEvents(page);
@@ -77,9 +101,7 @@ const EventsTab = () => {
         async () => fetchEvents(page)
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("🔥 Supabase realtime listener for events started!");
-        }
+        if (status === "SUBSCRIBED") console.log("🔥 Supabase realtime listener for events started!");
       });
 
     return () => supabase.removeChannel(channel);
@@ -138,7 +160,6 @@ const EventsTab = () => {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) {
         let errMessage = "Failed to deny event";
         try {
@@ -149,7 +170,6 @@ const EventsTab = () => {
         }
         throw new Error(errMessage);
       }
-
       await showSuccessAlert("Event denied!");
       fetchEvents(page);
     } catch (error) {
@@ -177,10 +197,7 @@ const EventsTab = () => {
     }
     setAddingEvent(true);
 
-    const formatLocalDateTime = (value) => {
-      if (!value) return null;
-      return value.length === 16 ? `${value}:00` : value;
-    };
+    const formatLocalDateTime = (value) => value.length === 16 ? `${value}:00` : value;
 
     const payload = {
       name: newEvent.name.trim(),
@@ -231,13 +248,39 @@ const EventsTab = () => {
       </Typography>
 
       <Box mb={2}>
-        <Button
-          variant="contained"
-          onClick={() => setOpenAdd(true)}
-          disabled={loading || addingEvent}
-        >
-          Add Event
-        </Button>
+        {/* Only render Add Event button if user is NOT Super Admin */}
+        {userRole !== "S" && (
+<Button
+  onClick={() => setOpenAdd(true)}
+  disabled={loading || addingEvent}
+  sx={{
+    bgcolor: getRoleButtonColor(userRole) + " !important",
+    color: "#fff",
+    fontWeight: "bold",
+    px: 3,
+    py: 1.2,
+    border: "2px solid rgba(0,0,0,0.15)",
+    borderRadius: "8px",
+    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+    textTransform: "none",
+    transition: "all 0.2s ease",
+    '&:hover': {
+      bgcolor: getRoleButtonColor(userRole) + " !important",
+      opacity: 0.9,
+      boxShadow: "0 6px 10px rgba(0,0,0,0.15)",
+    },
+    '&:disabled': {
+      bgcolor: "#cbd5e1 !important",
+      color: "#64748b",
+      boxShadow: "none",
+    },
+  }}
+>
+  Add Event
+</Button>
+
+
+        )}
       </Box>
 
       <Divider sx={{ mb: 2 }} />
@@ -253,6 +296,7 @@ const EventsTab = () => {
           approvingId={approvingId}
           denyingId={denyingId}
           onRowClick={handleRowClick}
+          userRole={userRole}
         />
       </Box>
 
@@ -266,7 +310,6 @@ const EventsTab = () => {
         />
       </Box>
 
-      {/* Add Event Dialog */}
       <AddEventDialog
         open={openAdd}
         onClose={() => !addingEvent && setOpenAdd(false)}
@@ -277,7 +320,6 @@ const EventsTab = () => {
         addingEvent={addingEvent}
       />
 
-      {/* Event Details Dialog */}
       <EventDetailsDialog
         open={openDesc}
         onClose={() => setOpenDesc(false)}

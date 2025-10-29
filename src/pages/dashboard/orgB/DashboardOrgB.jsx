@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Drawer,
@@ -14,10 +14,12 @@ import {
   Snackbar,
   Alert,
   Badge,
+  ThemeProvider,
+  createTheme,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
-// Icons (all black)
+// Icons
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import PeopleIcon from '@mui/icons-material/People';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -34,23 +36,13 @@ import LibraryBooksIcon from '@mui/icons-material/LibraryBooks';
 import EventListTab from './tabs/EventListTab';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 
-
-
-
-import {
-  signOutUser,
-  setupTabCloseLogout,
-  getStoredToken,
-} from '@/services/SessionManager';
-
-import { createClient } from '@supabase/supabase-js';
-
 import OverviewTab from './tabs/OverviewTab';
 import ViewReportsTabFilteredByBarangay from './tabs/ViewReportsTab';
 import CreateReportTab from './tabs/CreateReportTab/index';
-
-// Notifications tab from orgA
 import NotificationsTab from '../orgA/tabs/NotificationsTab';
+
+import { createClient } from '@supabase/supabase-js';
+import { signOutUser, setupTabCloseLogout, getStoredToken } from '@/services/SessionManager';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -59,13 +51,60 @@ const supabase = createClient(
 
 const drawerWidth = 260;
 
+// Role-based theme function
+const getRoleTheme = (role) => {
+  const base = {
+    background: { default: '#fefdfb', paper: '#ffffff' },
+    text: { primary: '#1e293b', secondary: '#475569' },
+    divider: '#e2e8f0',
+  };
+
+  switch (role) {
+    case 'S': // Super Admin → yellow
+      return createTheme({
+        palette: {
+          ...base,
+          primary: { main: '#facc15', light: '#fde68a', dark: '#b45309', contrastText: '#000' },
+          secondary: { main: '#2563eb', contrastText: '#fff' },
+        },
+        customGradient: 'linear-gradient(90deg, #facc15, #fde68a)',
+      });
+    case 'D': // DILG → green
+      return createTheme({
+        palette: {
+          ...base,
+          primary: { main: '#059669', light: '#34d399', dark: '#047857', contrastText: '#fff' },
+          secondary: { main: '#06b6d4', contrastText: '#fff' },
+        },
+        customGradient: 'linear-gradient(90deg, #059669, #34d399)',
+      });
+    case 'B': // Barangay → blue
+      return createTheme({
+        palette: {
+          ...base,
+          primary: { main: '#2563eb', light: '#3b82f6', dark: '#1d4ed8', contrastText: '#fff' },
+          secondary: { main: '#f59e0b', contrastText: '#fff' },
+        },
+        customGradient: 'linear-gradient(90deg, #2563eb, #3b82f6)',
+      });
+    default:
+      return createTheme({
+        palette: {
+          ...base,
+          primary: { main: '#64748b', light: '#94a3b8', dark: '#334155', contrastText: '#fff' },
+          secondary: { main: '#475569', contrastText: '#fff' },
+        },
+        customGradient: 'linear-gradient(90deg, #64748b, #94a3b8)',
+      });
+  }
+};
+
 const DashboardOrgB = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
 
-  // Notifications related states
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -73,7 +112,6 @@ const DashboardOrgB = () => {
 
   const prevNotificationsRef = useRef([]);
 
-  // Session and user info
   const storedSession = sessionStorage.getItem('session');
   const parsedSession = storedSession ? JSON.parse(storedSession) : null;
   const token = parsedSession?.access_token || parsedSession?.[0]?.access_token || null;
@@ -83,7 +121,9 @@ const DashboardOrgB = () => {
   const userId =
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
 
-  // Fetch notifications function
+  const roleTheme = useMemo(() => getRoleTheme(userRole), [userRole]);
+
+  // Fetch notifications
   const fetchNotifications = async () => {
     if (!token) return;
     try {
@@ -93,12 +133,8 @@ const DashboardOrgB = () => {
           : `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notifications`;
 
       const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
-
       if (!res.ok) throw new Error(await res.text());
       const { data } = await res.json();
       setNotifications(data || []);
@@ -108,57 +144,36 @@ const DashboardOrgB = () => {
     }
   };
 
-  // Fetch notifications on mount or token change
-  useEffect(() => {
-    fetchNotifications();
-  }, [token]);
+  useEffect(() => { fetchNotifications(); }, [token]);
 
-  // Realtime listener for notifications
+  // Realtime notifications listener
   useEffect(() => {
     if (!token) return;
-
     const channel = supabase
       .channel('realtime:notifications')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications' },
-        () => {
-          fetchNotifications();
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('🔥 Supabase realtime listener started successfully!');
-        }
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchNotifications())
+      .subscribe(status => {
+        if (status === 'SUBSCRIBED') console.log('🔥 Supabase realtime listener active!');
       });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [token, userRole, userId]);
 
-  // Detect new unread notifications and show snackbar popup
+  // Detect new unread notifications for snackbar
   useEffect(() => {
     if (!notifications.length) return;
-
     const prevNotifications = prevNotificationsRef.current;
-
     const newNotifs = notifications.filter(
-      (n) => !n.is_viewed && !prevNotifications.some((prev) => prev.id === n.id)
+      n => !n.is_viewed && !prevNotifications.some(prev => prev.id === n.id)
     );
-
     if (newNotifs.length > 0) {
       setSnackbarMessage(newNotifs[0].title);
       setSnackbarOpen(true);
-      setUnreadCount(notifications.filter((n) => !n.is_viewed).length);
+      setUnreadCount(notifications.filter(n => !n.is_viewed).length);
     }
-
     prevNotificationsRef.current = notifications;
   }, [notifications]);
 
-  const closeSnackbar = () => {
-    setSnackbarOpen(false);
-  };
+  const closeSnackbar = () => setSnackbarOpen(false);
 
   useEffect(() => {
     const cleanup = setupTabCloseLogout();
@@ -166,83 +181,25 @@ const DashboardOrgB = () => {
   }, []);
 
   useEffect(() => {
-    const storedSession = sessionStorage.getItem('session');
     const storedIndex = sessionStorage.getItem('activeTab');
-
-    if (!storedSession) {
-      navigate('/login/LogInOrgB');
-      return;
-    }
-
-    try {
-      const token = getStoredToken();
-      if (!token) navigate('/login/LogInOrgB');
-    } catch {
-      navigate('/login/LogInOrgB');
-    }
-
-    if (storedIndex !== null) {
-      setActiveTab(Number(storedIndex));
-    }
-  }, [navigate]);
-
-  const handleTabChange = (index) => {
-    setActiveTab(index);
-    sessionStorage.setItem('activeTab', index.toString());
-  };
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    await signOutUser(navigate);
-    setIsLoggingOut(false);
-  };
-
-  // Tabs with unread badge on Notifications label
+    if (storedIndex !== null) setActiveTab(Number(storedIndex));
+  }, []);
+  // Tabs definition
   const tabs = [
+    { label: 'Overview', icon: <DashboardIcon />, component: <OverviewTab /> },
+    { label: 'Reports', icon: <AssignmentIcon />, component: <ViewReportsTabFilteredByBarangay /> },
+    { label: 'Create Report', icon: <PeopleIcon />, component: <CreateReportTab /> },
+    { label: 'Events', icon: <EventNoteIcon />, component: <EventListTab /> },
     {
-      label: 'Overview',
-      icon: <DashboardIcon sx={{ color: 'black' }} />,
-      component: <OverviewTab />,
+      label: 'Notifications',
+      icon: <NotificationsIcon />,
+      component: <NotificationsTab notifications={notifications} setNotifications={setNotifications} />,
     },
-    {
-      label: 'Reports',
-      icon: <AssignmentIcon sx={{ color: 'black' }} />,
-      component: <ViewReportsTabFilteredByBarangay />,
-    },
-    {
-      label: 'Create Report',
-      icon: <PeopleIcon sx={{ color: 'black' }} />,
-      component: <CreateReportTab />,
-    },
-    {
-      label: 'Events',
-      icon: <EventNoteIcon sx={{ color: 'black' }} />,
-      component: <EventListTab />,
-    },
-    {
-      label: (
-        <>
-          Notifications{' '}
-          {unreadCount > 0 && (
-            <Badge badgeContent={unreadCount} color="error" sx={{ ml: 9 }} />
-          )}
-        </>
-      ),
-      icon: <NotificationsIcon sx={{ color: 'black' }} />,
-      component: (
-        <NotificationsTab
-          notifications={notifications}
-          setNotifications={setNotifications}
-        />
-      ),
-    },
-      { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
-    
-   
+    { label: 'E-Library', icon: <LibraryBooksIcon />, component: <ELibraryTab /> },
   ];
 
   return (
-    <>
+    <ThemeProvider theme={roleTheme}>
       <Box sx={{ display: 'flex', height: '100vh', overflowX: 'hidden' }}>
         <Drawer
           variant="permanent"
@@ -252,8 +209,8 @@ const DashboardOrgB = () => {
             [`& .MuiDrawer-paper`]: {
               width: drawerWidth,
               boxSizing: 'border-box',
-              backgroundColor: theme.palette.background.default,
-              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: roleTheme.palette.background.default,
+              borderRight: `1px solid ${roleTheme.palette.divider}`,
               display: 'flex',
               flexDirection: 'column',
               pt: 2,
@@ -266,36 +223,33 @@ const DashboardOrgB = () => {
 
           <List sx={{ flexGrow: 1 }}>
             {tabs.map((tab, index) => (
-              <ListItem
-                key={tab.label}
-                disablePadding
-                sx={{ mx: 1.5, borderRadius: '0.5rem' }}
-              >
+              <ListItem key={tab.label} disablePadding sx={{ mx: 1.5, borderRadius: '0.5rem' }}>
                 <ListItemButton
                   selected={activeTab === index}
-                  onClick={() => handleTabChange(index)}
+                  onClick={() => { setActiveTab(index); sessionStorage.setItem('activeTab', index.toString()); }}
                   sx={{
                     borderRadius: '0.5rem',
                     px: 2,
                     py: 1,
                     transition: 'background-color 0.2s ease',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                     '&:hover': {
-                      backgroundColor: '#f9c016ff',
+                      background: roleTheme.customGradient,
+                      opacity: 0.7,
                     },
                     '&.Mui-selected': {
-                      backgroundColor: theme.palette.primary.main,
-                      color: theme.palette.text.primary,
+                      background: roleTheme.customGradient,
+                      color: roleTheme.palette.primary.contrastText,
                       fontWeight: 600,
-                      '&:hover': {
-                        backgroundColor: '#f9e616ff',
-                      },
                     },
                   }}
                 >
                   <ListItemIcon
                     sx={{
                       minWidth: 36,
-                      color: activeTab === index ? theme.palette.text.primary : 'black',
+                      color: activeTab === index ? roleTheme.palette.primary.contrastText : '#1e293b',
                     }}
                   >
                     {tab.icon}
@@ -307,13 +261,16 @@ const DashboardOrgB = () => {
                         fontSize="0.95rem"
                         sx={{
                           fontWeight: activeTab === index ? 600 : 500,
-                          color: activeTab === index ? theme.palette.text.primary : 'black',
+                          color: activeTab === index ? roleTheme.palette.primary.contrastText : '#1e293b',
                         }}
                       >
                         {tab.label}
                       </Typography>
                     }
                   />
+                  {tab.label === 'Notifications' && unreadCount > 0 && (
+                    <Badge badgeContent={unreadCount} color="error" sx={{ mr: 1 }} />
+                  )}
                 </ListItemButton>
               </ListItem>
             ))}
@@ -321,17 +278,16 @@ const DashboardOrgB = () => {
 
           <Box sx={{ p: 2 }}>
             <Button
-              onClick={handleLogout}
+              onClick={async () => {
+                setIsLoggingOut(true);
+                await signOutUser(navigate);
+                setIsLoggingOut(false);
+              }}
               fullWidth
               variant="contained"
               size="small"
-              color="primary"
               startIcon={
-                isLoggingOut ? (
-                  <CircularProgress size={16} color="inherit" />
-                ) : (
-                  <LogoutIcon sx={{ color: 'black' }} fontSize="small" />
-                )
+                isLoggingOut ? <CircularProgress size={16} color="inherit" /> : <LogoutIcon fontSize="small" />
               }
               disabled={isLoggingOut}
               sx={{
@@ -339,13 +295,12 @@ const DashboardOrgB = () => {
                 fontSize: '0.85rem',
                 fontWeight: 600,
                 borderRadius: '0.5rem',
-                color: 'black',
+                background: roleTheme.customGradient,
+                color: roleTheme.palette.primary.contrastText,
                 '&:hover': {
-                  backgroundColor: theme.palette.primary.light,
+                  opacity: 0.85,
                 },
-                '&:active': {
-                  transform: 'scale(0.97)',
-                },
+                '&:active': { transform: 'scale(0.97)' },
               }}
             >
               {isLoggingOut ? 'Logging out...' : 'Log Out'}
@@ -354,9 +309,7 @@ const DashboardOrgB = () => {
         </Drawer>
 
         <Box component="main" sx={{ flexGrow: 1, p: 2, overflowY: 'auto' }}>
-          {tabs[activeTab]?.component || (
-            <Typography variant="body1">😵 Unknown Tab</Typography>
-          )}
+          {tabs[activeTab]?.component || <Typography variant="body1">😵 Unknown Tab</Typography>}
         </Box>
       </Box>
 
@@ -365,24 +318,11 @@ const DashboardOrgB = () => {
         autoHideDuration={4000}
         onClose={closeSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        sx={{
-          '& .MuiPaper-root': {
-            minWidth: 320,
-            maxWidth: 400,
-            borderRadius: '0.5rem',
-            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-            mt: 2,
-          },
-        }}
       >
         <Alert
           onClose={closeSnackbar}
           severity="info"
-          icon={
-            <NotificationsActiveRoundedIcon
-              sx={{ fontSize: 28, mr: 1, color: '#fbbf24' }}
-            />
-          }
+          icon={<NotificationsActiveRoundedIcon sx={{ fontSize: 28, mr: 1, color: '#fbbf24' }} />}
           sx={{
             width: '100%',
             fontWeight: 700,
@@ -400,7 +340,7 @@ const DashboardOrgB = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
-    </>
+    </ThemeProvider>
   );
 };
 

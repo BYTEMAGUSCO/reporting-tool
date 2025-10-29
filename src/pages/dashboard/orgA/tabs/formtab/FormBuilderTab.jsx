@@ -4,7 +4,7 @@ import {
   TextField,
   Typography,
   Paper,
-  Divider
+  Divider,
 } from '@mui/material';
 import BuildIcon from '@mui/icons-material/Build';
 import { createClient } from '@supabase/supabase-js';
@@ -26,12 +26,19 @@ function getSessionToken() {
 
 const FormBuilderTab = () => {
   const [questions, setQuestions] = useState([]);
-  const [mode, setMode] = useState('edit'); // ← was previewMode
+  const [mode, setMode] = useState('edit');
   const [formName, setFormName] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // ===== Normal Question =====
   const addQuestion = () => {
-    const newQ = new FormQuestion();
+    const newQ = new FormQuestion(); // default type = text
+    setQuestions([...questions, newQ]);
+  };
+
+  // ===== Excel Table Question =====
+  const addExcelQuestion = () => {
+    const newQ = new FormQuestion('table'); // 👈 table type
     setQuestions([...questions, newQ]);
   };
 
@@ -52,8 +59,8 @@ const FormBuilderTab = () => {
     );
   };
 
+  // ===== Option Handlers =====
   const addOption = (id) => {
-    // console.log('💡 addOption triggered for:', id);
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -65,7 +72,6 @@ const FormBuilderTab = () => {
       })
     );
   };
-
 
   const updateOption = (id, idx, value) => {
     setQuestions((prev) =>
@@ -93,6 +99,91 @@ const FormBuilderTab = () => {
     );
   };
 
+  // ===== Table Handlers =====
+  const addColumn = (id, name = 'Column') => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.addColumn(name);
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  const updateColumn = (id, colIndex, name) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.updateColumn(colIndex, { label: name });
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  const removeColumn = (id, colIndex) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.removeColumn(colIndex);
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  const toggleColumnEditable = (id, colIndex) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          const col = instance.config.columns[colIndex];
+          instance.config.columns[colIndex] = {
+            ...col,
+            editable: !col.editable,
+          };
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  // ===== Table Row Handlers =====
+  const addRow = (id) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.addRow();
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  const removeRow = (id, rowIndex) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.removeRow();
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  // ===== Save Handler =====
   const handleSave = async () => {
     setSaving(true);
     const success = await handleSaveLayout(
@@ -138,8 +229,9 @@ const FormBuilderTab = () => {
 
         <FormEditorControls
           onAddQuestion={addQuestion}
-          mode={mode}             // ⬅️ passed as string
-          setMode={setMode}       // ⬅️ string setter
+          onAddExcelQuestion={addExcelQuestion}
+          mode={mode}
+          setMode={setMode}
           onSave={handleSave}
           saving={saving}
         />
@@ -160,12 +252,18 @@ const FormBuilderTab = () => {
         <Box sx={{ maxWidth: '800px', mx: 'auto' }}>
           <FormPreviewRenderer
             questions={questions}
-            mode={mode}                     // ⬅️ key update here
+            mode={mode}
             deleteQuestion={deleteQuestion}
             updateQuestion={updateQuestion}
             updateOption={updateOption}
             addOption={addOption}
             removeOption={removeOption}
+            addColumn={addColumn}
+            updateColumn={updateColumn}
+            removeColumn={removeColumn}
+            toggleColumnEditable={toggleColumnEditable}
+            addRow={addRow}           // ✅ pass row handlers
+            removeRow={removeRow}     // ✅ pass row handlers
           />
         </Box>
       </Box>
