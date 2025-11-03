@@ -7,18 +7,11 @@ import {
   Divider,
 } from '@mui/material';
 import BuildIcon from '@mui/icons-material/Build';
-import { createClient } from '@supabase/supabase-js';
-
 import FormQuestion from '../models/FormQuestion';
 import FormEditorControls from './formbuildercomponents/FormEditorControls';
 import FormPreviewRenderer from './formbuildercomponents/FormPreviewRenderer';
 import { handleSaveLayout } from './formbuildercomponents/FormSaveHandler';
 import { showSuccessAlert, showErrorAlert } from '@/services/alert.js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
-);
 
 function getSessionToken() {
   return JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
@@ -26,32 +19,71 @@ function getSessionToken() {
 
 const FormBuilderTab = () => {
   const [questions, setQuestions] = useState([]);
-  const [mode, setMode] = useState('edit');
+  const [mode, setMode] = useState('edit'); // edit | preview | submit
   const [formName, setFormName] = useState('');
   const [saving, setSaving] = useState(false);
 
   // ===== Normal Question =====
   const addQuestion = () => {
-    const newQ = new FormQuestion(); // default type = text
-    setQuestions([...questions, newQ]);
+    if (mode !== 'edit') return;
+    const newQ = new FormQuestion();
+    setQuestions((prev) => [...prev, newQ]);
   };
 
   // ===== Excel Table Question =====
   const addExcelQuestion = () => {
-    const newQ = new FormQuestion('table'); // 👈 table type
-    setQuestions([...questions, newQ]);
+    if (mode !== 'edit') return;
+
+    const tableCount = questions.filter((q) => q.type === 'table').length + 1;
+
+    const newQ = new FormQuestion(`Table ${tableCount}`, 'table', [], {
+      columns: [
+        { key: `col_${crypto.randomUUID().slice(0, 6)}`, label: 'Question', editable: true },
+        { key: `col_${crypto.randomUUID().slice(0, 6)}`, label: 'Answer', editable: true },
+      ],
+      rows: [{ label: 'Row 1' }],
+      rowHeaderLabel: 'Row Name',
+    });
+
+    setQuestions((prev) => [...prev, newQ]);
+
+    // Auto-scroll into view
+    setTimeout(() => {
+      const element = document.getElementById(newQ.id);
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
   };
 
+  // ===== Delete Question =====
   const deleteQuestion = (id) => {
-    setQuestions(questions.filter((q) => q.id !== id));
+    if (mode !== 'edit') return;
+    setQuestions((prev) => prev.filter((q) => q.id !== id));
   };
 
+  // ===== Update Question =====
   const updateQuestion = (id, key, value) => {
     setQuestions((prev) =>
       prev.map((q) => {
+        const instance = FormQuestion.fromJSON(q);
+
         if (q.id === id) {
-          const instance = FormQuestion.fromJSON(q);
-          instance.updateField(key, value);
+          // 🟢 Auto rebuild config when switching to table
+          if (key === 'type' && value === 'table') {
+            instance.type = 'table';
+            instance.config = {
+              columns: [
+                { key: `col_${crypto.randomUUID().slice(0, 6)}`, label: 'Question', editable: true },
+                { key: `col_${crypto.randomUUID().slice(0, 6)}`, label: 'Answer', editable: true },
+              ],
+              rows: [{ label: 'Row 1' }],
+              rowHeaderLabel: 'Row Name',
+            };
+          } else if (key === 'type' && value !== 'table') {
+            instance.type = value;
+            instance.config = {};
+          } else {
+            instance.updateField(key, value);
+          }
           return instance;
         }
         return q;
@@ -61,6 +93,7 @@ const FormBuilderTab = () => {
 
   // ===== Option Handlers =====
   const addOption = (id) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -87,6 +120,7 @@ const FormBuilderTab = () => {
   };
 
   const removeOption = (id, index) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id) {
@@ -101,6 +135,7 @@ const FormBuilderTab = () => {
 
   // ===== Table Handlers =====
   const addColumn = (id, name = 'Column') => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
@@ -113,12 +148,13 @@ const FormBuilderTab = () => {
     );
   };
 
-  const updateColumn = (id, colIndex, name) => {
+  const updateColumn = (id, colIndex, updatedProps) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
           const instance = FormQuestion.fromJSON(q);
-          instance.updateColumn(colIndex, { label: name });
+          instance.updateColumn(colIndex, updatedProps);
           return instance;
         }
         return q;
@@ -127,6 +163,7 @@ const FormBuilderTab = () => {
   };
 
   const removeColumn = (id, colIndex) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
@@ -140,15 +177,13 @@ const FormBuilderTab = () => {
   };
 
   const toggleColumnEditable = (id, colIndex) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
           const instance = FormQuestion.fromJSON(q);
           const col = instance.config.columns[colIndex];
-          instance.config.columns[colIndex] = {
-            ...col,
-            editable: !col.editable,
-          };
+          instance.updateColumn(colIndex, { editable: !col.editable });
           return instance;
         }
         return q;
@@ -158,6 +193,7 @@ const FormBuilderTab = () => {
 
   // ===== Table Row Handlers =====
   const addRow = (id) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
@@ -171,11 +207,25 @@ const FormBuilderTab = () => {
   };
 
   const removeRow = (id, rowIndex) => {
+    if (mode !== 'edit') return;
     setQuestions((prev) =>
       prev.map((q) => {
         if (q.id === id && q.type === 'table') {
           const instance = FormQuestion.fromJSON(q);
-          instance.removeRow();
+          instance.removeRow(rowIndex);
+          return instance;
+        }
+        return q;
+      })
+    );
+  };
+
+  const updateRowCell = (id, rowIndex, colId, value) => {
+    setQuestions((prev) =>
+      prev.map((q) => {
+        if (q.id === id && q.type === 'table') {
+          const instance = FormQuestion.fromJSON(q);
+          instance.updateRowCell(rowIndex, colId, value);
           return instance;
         }
         return q;
@@ -262,8 +312,9 @@ const FormBuilderTab = () => {
             updateColumn={updateColumn}
             removeColumn={removeColumn}
             toggleColumnEditable={toggleColumnEditable}
-            addRow={addRow}           // ✅ pass row handlers
-            removeRow={removeRow}     // ✅ pass row handlers
+            addRow={addRow}
+            removeRow={removeRow}
+            updateRowCell={updateRowCell}
           />
         </Box>
       </Box>

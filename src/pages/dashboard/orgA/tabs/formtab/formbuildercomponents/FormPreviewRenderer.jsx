@@ -2,6 +2,7 @@ import { Box, IconButton, Button, CircularProgress } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import QuestionRenderer from './QuestionRenderer';
 import QuestionEditor from './QuestionEditor';
+import ExcelQuestionRenderer from './ExcelQuestionRenderer';
 import { useEffect, useState } from 'react';
 
 const FormPreviewRenderer = ({
@@ -12,13 +13,20 @@ const FormPreviewRenderer = ({
   updateOption,
   addOption,
   removeOption,
+  addColumn,
+  updateColumn,
+  removeColumn,
+  toggleColumnEditable,
+  addRow,
+  removeRow,
   answers = {},
   onSubmit,
   onAnswerChange,
 }) => {
   const [formAnswers, setFormAnswers] = useState({});
-  const [loadingButtons, setLoadingButtons] = useState({}); // { delete_<id>: true, submit: true }
+  const [loadingButtons, setLoadingButtons] = useState({});
 
+  // Initialize answers for submit mode
   useEffect(() => {
     if (mode === 'submit') {
       setFormAnswers(answers || {});
@@ -26,10 +34,7 @@ const FormPreviewRenderer = ({
   }, [answers, mode]);
 
   const handleAnswerChange = (id, value) => {
-    const updated = {
-      ...formAnswers,
-      [id]: value,
-    };
+    const updated = { ...formAnswers, [id]: value };
     setFormAnswers(updated);
     if (onAnswerChange) onAnswerChange(id, value);
   };
@@ -45,27 +50,26 @@ const FormPreviewRenderer = ({
 
   const handleSubmit = async () => {
     setLoadingButtons((prev) => ({ ...prev, submit: true }));
-
     const formJSON = {
       submittedAt: new Date().toISOString(),
       answers: formAnswers,
     };
-
     try {
-      if (onSubmit) {
-        await onSubmit(formJSON);
-      } else {
-        alert('Form submitted! (still fake, JSON in console ✨)');
-      }
+      if (onSubmit) await onSubmit(formJSON);
+      else console.log('Form submitted!', formJSON);
     } finally {
       setLoadingButtons((prev) => ({ ...prev, submit: false }));
     }
   };
 
+  // ==========================================
+  // 🔥 MAIN RENDERER LOGIC
+  // ==========================================
   return (
     <Box>
       {questions.map((q) => (
         <Box key={q.id} mt={3} p={2} border="1px solid #ccc" borderRadius={2}>
+          {/* Delete button (only available in edit mode) */}
           <Box display="flex" justifyContent="flex-end" alignItems="center">
             {mode === 'edit' && (
               <IconButton
@@ -82,39 +86,111 @@ const FormPreviewRenderer = ({
             )}
           </Box>
 
+          {/* ======================
+                EDIT MODE
+          ======================= */}
           {mode === 'edit' && (
-            <QuestionEditor
-              q={q}
-              updateQuestion={updateQuestion}
-              updateOption={updateOption}
-              addOption={addOption}
-              removeOption={removeOption}
-            />
+            q.type === 'table' ? (
+              <ExcelQuestionRenderer
+                q={q}
+                mode="edit"
+                addRow={addRow}
+                removeRow={removeRow}
+                toggleColumnEditable={toggleColumnEditable}
+                // 🟢 Proper column label update handler
+                updateColumnLabel={(id, colIndex, newLabel) => {
+                  const updatedColumns = q.config.columns.map((col, i) =>
+                    i === colIndex ? { ...col, label: newLabel } : col
+                  );
+
+                  updateQuestion(id, 'config', {
+                    ...q.config,
+                    columns: updatedColumns,
+                  });
+                }}
+                // 🟢 Update Row Label
+                updateRowLabel={(id, rowIdx, newLabel) => {
+                  updateQuestion(id, 'config', {
+                    ...q.config,
+                    rows: q.config.rows.map((r, i) =>
+                      i === rowIdx ? { ...r, label: newLabel } : r
+                    ),
+                  });
+                }}
+                // 🟢 Update Row Header Label
+                updateRowHeaderLabel={(id, newLabel) => {
+                  updateQuestion(id, 'config', {
+                    ...q.config,
+                    rowHeaderLabel: newLabel,
+                  });
+                }}
+                // 🟢 Update Table Name
+                updateQuestionLabel={(id, newLabel) => updateQuestion(id, 'label', newLabel)}
+              />
+            ) : (
+              <QuestionEditor
+                q={q}
+                updateQuestion={updateQuestion}
+                updateOption={updateOption}
+                addOption={addOption}
+                removeOption={removeOption}
+              />
+            )
           )}
 
-          {mode === 'preview' && <QuestionRenderer q={q} disabled />}
+          {/* ======================
+                PREVIEW MODE
+          ======================= */}
+          {mode === 'preview' && (
+            q.type === 'table' ? (
+              <ExcelQuestionRenderer
+                q={q}
+                mode="preview"
+                answers={formAnswers}
+                setAnswers={setFormAnswers}
+              />
+            ) : (
+              <QuestionRenderer q={q} disabled />
+            )
+          )}
 
+          {/* ======================
+                SUBMIT MODE
+          ======================= */}
           {mode === 'submit' && (
-            <QuestionRenderer
-              q={q}
-              mode="submit"
-              answers={formAnswers}
-              setAnswers={setFormAnswers}
-              onAnswerChange={handleAnswerChange}
-            />
+            q.type === 'table' ? (
+              <ExcelQuestionRenderer
+                q={q}
+                mode="submit"
+                answers={formAnswers}
+                setAnswers={setFormAnswers}
+                addRow={addRow}
+                removeRow={removeRow}
+                updateColumnLabel={updateColumn}
+              />
+            ) : (
+              <QuestionRenderer
+                q={q}
+                mode="submit"
+                answers={formAnswers}
+                setAnswers={setFormAnswers}
+                onAnswerChange={handleAnswerChange}
+              />
+            )
           )}
         </Box>
       ))}
 
+      {/* ======================
+            SUBMIT BUTTON
+      ======================= */}
       {mode === 'submit' && (
         <Box mt={4} textAlign="center">
           <Button
             variant="contained"
             color="primary"
             onClick={handleSubmit}
-            disabled={
-              Object.keys(formAnswers).length < 1 || loadingButtons.submit
-            }
+            disabled={Object.keys(formAnswers).length < 1 || loadingButtons.submit}
             startIcon={
               loadingButtons.submit && <CircularProgress size={18} color="inherit" />
             }
