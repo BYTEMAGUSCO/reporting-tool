@@ -96,8 +96,9 @@ const FormPreviewRenderer = ({
                 mode="edit"
                 addRow={addRow}
                 removeRow={removeRow}
+                addColumn={addColumn} // ✅ FIXED: Pass addColumn
                 toggleColumnEditable={toggleColumnEditable}
-                // 🟢 Proper column label update handler
+                // 🟢 Update column label
                 updateColumnLabel={(id, colIndex, newLabel) => {
                   const updatedColumns = q.config.columns.map((col, i) =>
                     i === colIndex ? { ...col, label: newLabel } : col
@@ -108,7 +109,7 @@ const FormPreviewRenderer = ({
                     columns: updatedColumns,
                   });
                 }}
-                // 🟢 Update Row Label
+                // 🟢 Update row label
                 updateRowLabel={(id, rowIdx, newLabel) => {
                   updateQuestion(id, 'config', {
                     ...q.config,
@@ -117,14 +118,14 @@ const FormPreviewRenderer = ({
                     ),
                   });
                 }}
-                // 🟢 Update Row Header Label
+                // 🟢 Update row header label
                 updateRowHeaderLabel={(id, newLabel) => {
                   updateQuestion(id, 'config', {
                     ...q.config,
                     rowHeaderLabel: newLabel,
                   });
                 }}
-                // 🟢 Update Table Name
+                // 🟢 Update table name (label)
                 updateQuestionLabel={(id, newLabel) => updateQuestion(id, 'label', newLabel)}
               />
             ) : (

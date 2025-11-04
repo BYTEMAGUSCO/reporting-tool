@@ -18,7 +18,9 @@ const CreateReportTab = () => {
   const [forms, setForms] = useState([]);
   const [loadingForms, setLoadingForms] = useState(false);
 
-  // Fetch forms on mount
+  // ================================
+  // 🧩 Fetch all forms (once)
+  // ================================
   useEffect(() => {
     const fetchForms = async () => {
       setLoadingForms(true);
@@ -39,7 +41,9 @@ const CreateReportTab = () => {
     fetchForms();
   }, []);
 
-  // Load selected form content
+  // ================================
+  // 🧠 Load selected form content
+  // ================================
   useEffect(() => {
     if (!selectedFormId) return;
 
@@ -47,6 +51,7 @@ const CreateReportTab = () => {
       setLoadingFormData(true);
       setSelectedQuestions([]);
       setAnswers({});
+
       try {
         const token = getSessionToken();
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`, {
@@ -61,9 +66,20 @@ const CreateReportTab = () => {
           return;
         }
 
-        const parsed = Array.isArray(form.form_content)
-          ? form.form_content
-          : JSON.parse(form.form_content);
+        // ✅ Fixed Parsing: handle both string and already-parsed objects safely
+        let parsed;
+        try {
+          parsed = typeof form.form_content === 'string'
+            ? JSON.parse(form.form_content)
+            : form.form_content;
+        } catch (err) {
+          console.error('❌ Failed to parse form_content:', err);
+          parsed = [];
+        }
+
+        // Debug logging (optional)
+        console.log('📦 Raw form content:', form.form_content);
+        console.log('✅ Parsed form questions:', parsed);
 
         if (!Array.isArray(parsed)) {
           await showErrorAlert('Form structure is invalid.');
@@ -81,10 +97,16 @@ const CreateReportTab = () => {
     loadForm();
   }, [selectedFormId]);
 
+  // ================================
+  // 💬 Answer handling
+  // ================================
   const handleAnswerChange = (questionId, value) => {
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
+  // ================================
+  // 📄 PDF + Upload
+  // ================================
   const handleFormSubmit = async (formJSON) => {
     try {
       const form = forms.find((f) => f.form_id === selectedFormId);
@@ -176,22 +198,27 @@ const CreateReportTab = () => {
       const formData = new FormData();
 
       const session = JSON.parse(sessionStorage.getItem('session'));
-const userNameRaw = session?.user?.user_metadata?.full_name || session?.user?.email || 'Anonymous';
-const safeUserName = stripUnsupportedChars(userNameRaw).replace(/\s+/g, '_');
+      const userNameRaw =
+        session?.user?.user_metadata?.full_name || session?.user?.email || 'Anonymous';
+      const safeUserName = stripUnsupportedChars(userNameRaw).replace(/\s+/g, '_');
       const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
 
       const safeFileName = `${formName.replace(/\s+/g, '_')}${
-  barangayNameRaw ? `_${stripUnsupportedChars(barangayNameRaw).replace(/\s+/g, '_')}` : ''
-}_${safeUserName}_submission.pdf`;
-
+        barangayNameRaw
+          ? `_${stripUnsupportedChars(barangayNameRaw).replace(/\s+/g, '_')}`
+          : ''
+      }_${safeUserName}_submission.pdf`;
 
       formData.append('file', pdfBlob, safeFileName);
 
-      const uploadRes = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-report`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const uploadRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-report`,
+        {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        }
+      );
 
       if (!uploadRes.ok) {
         let msg = 'An unknown error occurred.';
@@ -222,6 +249,9 @@ const safeUserName = stripUnsupportedChars(userNameRaw).replace(/\s+/g, '_');
     }
   };
 
+  // ================================
+  // 🧾 Render
+  // ================================
   return (
     <Box sx={{ height: '100vh', p: 2 }}>
       <Typography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>

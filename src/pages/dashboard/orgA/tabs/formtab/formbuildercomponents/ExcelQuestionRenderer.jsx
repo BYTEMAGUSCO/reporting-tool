@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react';
 import { Box, TextField, Typography, IconButton, Button, Checkbox } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useState } from 'react';
+import AddIcon from '@mui/icons-material/Add';
 
 const ExcelQuestionRenderer = ({
   q,
@@ -11,11 +12,12 @@ const ExcelQuestionRenderer = ({
   setAnswers,
   updateColumnLabel,
   toggleColumnEditable,
+  addColumn,
   addRow,
   removeRow,
   updateRowLabel,
   updateRowHeaderLabel,
-  updateQuestionLabel, // 🟢 new prop
+  updateQuestionLabel,
 }) => {
   const isSubmitMode = mode === "submit";
   const isEditMode = mode === "edit";
@@ -24,9 +26,11 @@ const ExcelQuestionRenderer = ({
   const columns = Array.isArray(config.columns) ? config.columns : [];
   const rows = Array.isArray(config.rows) ? config.rows : [];
 
+  const [localRows, setLocalRows] = useState(rows);
+  useEffect(() => setLocalRows(rows), [rows]);
+
   const [editingTableName, setEditingTableName] = useState(false);
   const [tempTableName, setTempTableName] = useState(q.label || "Table");
-
   const [editingColumn, setEditingColumn] = useState(null);
   const [tempColumnLabel, setTempColumnLabel] = useState("");
   const [editingRow, setEditingRow] = useState(null);
@@ -52,9 +56,7 @@ const ExcelQuestionRenderer = ({
   };
 
   const saveTableName = () => {
-    if (updateQuestionLabel && isEditMode) {
-      updateQuestionLabel(q.id, tempTableName);
-    }
+    if (updateQuestionLabel && isEditMode) updateQuestionLabel(q.id, tempTableName);
     setEditingTableName(false);
   };
 
@@ -65,9 +67,7 @@ const ExcelQuestionRenderer = ({
   };
 
   const saveEditColumn = (index) => {
-    if (updateColumnLabel && isEditMode) {
-      updateColumnLabel(q.id, index, tempColumnLabel);
-    }
+    if (updateColumnLabel && isEditMode) updateColumnLabel(q.id, index, tempColumnLabel);
     setEditingColumn(null);
   };
 
@@ -78,16 +78,12 @@ const ExcelQuestionRenderer = ({
   };
 
   const saveEditRow = (index) => {
-    if (updateRowLabel && isEditMode) {
-      updateRowLabel(q.id, index, tempRowLabel);
-    }
+    if (updateRowLabel && isEditMode) updateRowLabel(q.id, index, tempRowLabel);
     setEditingRow(null);
   };
 
   const saveRowHeaderLabel = () => {
-    if (updateRowHeaderLabel && isEditMode) {
-      updateRowHeaderLabel(q.id, tempRowHeaderLabel);
-    }
+    if (updateRowHeaderLabel && isEditMode) updateRowHeaderLabel(q.id, tempRowHeaderLabel);
     setEditingRowHeader(false);
   };
 
@@ -103,42 +99,65 @@ const ExcelQuestionRenderer = ({
       }}
     >
       {/* 🟣 Editable Table Title */}
-      <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-        {editingTableName ? (
-          <>
-            <TextField
-              variant="standard"
-              value={tempTableName}
-              onChange={(e) => setTempTableName(e.target.value)}
-              size="small"
-              autoFocus
-              inputProps={{ sx: { fontFamily } }}
-            />
-            <IconButton size="small" onClick={saveTableName}>
-              <CheckIcon fontSize="small" />
-            </IconButton>
-          </>
-        ) : (
-          <>
-            <Typography
-              variant="subtitle1"
-              fontWeight="bold"
-              sx={{ fontFamily, flexGrow: 1 }}
-            >
-              {q.label || "Table"}
-            </Typography>
-            {isEditMode && (
-              <IconButton
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          mb: 1,
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          {editingTableName ? (
+            <>
+              <TextField
+                variant="standard"
+                value={tempTableName}
+                onChange={(e) => setTempTableName(e.target.value)}
                 size="small"
-                onClick={() => {
-                  setEditingTableName(true);
-                  setTempTableName(q.label);
-                }}
-              >
-                <EditIcon fontSize="small" />
+                autoFocus
+                inputProps={{ sx: { fontFamily } }}
+              />
+              <IconButton size="small" onClick={saveTableName}>
+                <CheckIcon fontSize="small" />
               </IconButton>
-            )}
-          </>
+            </>
+          ) : (
+            <>
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ fontFamily }}>
+                {q.label || "Table"}
+              </Typography>
+              {isEditMode && (
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setEditingTableName(true);
+                    setTempTableName(q.label);
+                  }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              )}
+            </>
+          )}
+        </Box>
+
+        {/* ➕ Add Column Button */}
+        {isEditMode && (
+          <Button
+            onClick={() => addColumn(q.id)}
+            size="small"
+            startIcon={<AddIcon />}
+            sx={{
+              fontFamily,
+              backgroundColor: "#ffeb3b",
+              color: "#000",
+              textTransform: "none",
+              "&:hover": { backgroundColor: "#fdd835" },
+            }}
+          >
+            Add Column
+          </Button>
         )}
       </Box>
 
@@ -151,7 +170,6 @@ const ExcelQuestionRenderer = ({
             borderBottom: "2px solid #ccc",
             mb: 1,
             background: "#fafafa",
-            fontFamily,
           }}
         >
           {/* 🟡 Row Header Editable */}
@@ -164,7 +182,6 @@ const ExcelQuestionRenderer = ({
               justifyContent: "center",
               alignItems: "center",
               gap: 0.5,
-              fontFamily,
             }}
           >
             {isEditMode ? (
@@ -175,7 +192,7 @@ const ExcelQuestionRenderer = ({
                     onChange={(e) => setTempRowHeaderLabel(e.target.value)}
                     variant="standard"
                     size="small"
-                    inputProps={{ sx: { textAlign: "center", fontFamily } }}
+                    inputProps={{ sx: { textAlign: "center" } }}
                   />
                   <IconButton size="small" onClick={saveRowHeaderLabel}>
                     <CheckIcon fontSize="small" />
@@ -207,7 +224,6 @@ const ExcelQuestionRenderer = ({
                 justifyContent: "center",
                 alignItems: "center",
                 gap: 0.5,
-                fontFamily,
               }}
             >
               {isEditMode ? (
@@ -218,7 +234,7 @@ const ExcelQuestionRenderer = ({
                       onChange={(e) => setTempColumnLabel(e.target.value)}
                       variant="standard"
                       size="small"
-                      inputProps={{ sx: { textAlign: "center", fontFamily } }}
+                      inputProps={{ sx: { textAlign: "center" } }}
                     />
                     <IconButton size="small" onClick={() => saveEditColumn(i)}>
                       <CheckIcon fontSize="small" />
@@ -236,9 +252,7 @@ const ExcelQuestionRenderer = ({
                         checked={col.editable}
                         onChange={() => toggleColumnEditable(q.id, i)}
                       />
-                      <Typography variant="caption" sx={{ fontFamily }}>
-                        editable
-                      </Typography>
+                      <Typography variant="caption">editable</Typography>
                     </Box>
                   </>
                 )
@@ -250,7 +264,7 @@ const ExcelQuestionRenderer = ({
         </Box>
 
         {/* 🧾 Data Rows */}
-        {rows.map((row, rowIndex) => (
+        {localRows.map((row, rowIndex) => (
           <Box
             key={rowIndex}
             sx={{
@@ -258,10 +272,8 @@ const ExcelQuestionRenderer = ({
               gridTemplateColumns: `140px repeat(${columns.length}, 1fr) ${isEditMode ? "50px" : ""}`,
               borderBottom: "1px solid #e0e0e0",
               alignItems: "center",
-              fontFamily,
             }}
           >
-            {/* Row Label */}
             <Box sx={{ fontWeight: 500, p: 1, display: "flex", alignItems: "center", gap: 1 }}>
               {isEditMode ? (
                 editingRow === rowIndex ? (
@@ -271,7 +283,6 @@ const ExcelQuestionRenderer = ({
                       onChange={(e) => setTempRowLabel(e.target.value)}
                       variant="standard"
                       size="small"
-                      inputProps={{ sx: { fontFamily } }}
                     />
                     <IconButton size="small" onClick={() => saveEditRow(rowIndex)}>
                       <CheckIcon fontSize="small" />
@@ -290,21 +301,20 @@ const ExcelQuestionRenderer = ({
               )}
             </Box>
 
-            {/* Row Cells */}
             {columns.map((col, colIndex) => {
               const colKey = col.key;
               const value = answers?.[q.id]?.[rowIndex]?.[colKey] ?? "";
               const readOnly = isEditMode || !isSubmitMode || col.editable === false;
 
               return (
-                <Box key={colIndex} sx={{ p: 1, borderLeft: "1px solid #eee", fontFamily }}>
+                <Box key={colIndex} sx={{ p: 1, borderLeft: "1px solid #eee" }}>
                   <TextField
                     fullWidth
                     variant="standard"
                     value={value}
                     disabled={readOnly}
                     onChange={(e) => handleCellChange(rowIndex, colKey, e.target.value)}
-                    inputProps={{ sx: { textAlign: "center", fontFamily } }}
+                    inputProps={{ sx: { textAlign: "center" } }}
                   />
                 </Box>
               );
@@ -321,8 +331,19 @@ const ExcelQuestionRenderer = ({
         {/* ➕ Add Row */}
         {isEditMode && (
           <Box mt={2}>
-            <Button onClick={() => addRow(q.id)} variant="outlined" sx={{ fontFamily }}>
-              ➕ Add Row
+            <Button
+              onClick={() => addRow(q.id)}
+              variant="contained"
+              startIcon={<AddIcon />}
+              sx={{
+                fontFamily,
+                backgroundColor: "#ffeb3b",
+                color: "#000",
+                textTransform: "none",
+                "&:hover": { backgroundColor: "#fdd835" },
+              }}
+            >
+              Add Row
             </Button>
           </Box>
         )}
