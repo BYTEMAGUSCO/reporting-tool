@@ -20,36 +20,47 @@ const useReports = (userRole, userBarangay, page, activeTab) => {
       setLoading(true);
       setError(null);
       try {
-        const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+        const token =
+          JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?page=${pageNumber}&limit=10`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
+
         if (!res.ok) {
           const errJson = await res.json().catch(() => ({}));
           throw new Error(errJson.error || 'Failed to load reports');
         }
+
         const json = await res.json();
+        let filteredReports = [];
 
-    let filteredReports = [];
-
-    if (userRole === 'S' || userRole === 'D') {
-    // Supers and 'D' get ALL reports
-    filteredReports = json.data || [];
-    } else if (userBarangay) {
-    // Everyone else only their barangay reports
-    filteredReports = (json.data || []).filter(report => report.barangay === userBarangay);
-    }
-
-
+        if (userRole === 'S' || userRole === 'D') {
+          // Supers and 'D' get ALL reports
+          filteredReports = json.data || [];
+        } else if (userBarangay) {
+          // Everyone else only their barangay reports
+          filteredReports = (json.data || []).filter(
+            (report) => report.barangay === userBarangay
+          );
+        }
 
         // Filter by active tab status properly
         const tabStatus = statusMap[activeTab];
-        const tabFilteredReports = filteredReports.filter(r => r.report_status === tabStatus);
+        const tabFilteredReports = filteredReports.filter(
+          (r) => r.report_status === tabStatus
+        );
 
-        setReports(tabFilteredReports);
+        // Include remarks if present (especially for denied reports)
+        const reportsWithRemarks = tabFilteredReports.map((r) => ({
+          ...r,
+          remarks: r.remarks ?? null, // explicitly include remarks even if null
+        }));
+
+        setReports(reportsWithRemarks);
         setTotalPages(json.pagination?.totalPages || 1);
       } catch (err) {
         setError(err.message || 'Unknown error');
