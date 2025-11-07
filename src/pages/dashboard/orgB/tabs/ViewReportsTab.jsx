@@ -60,16 +60,6 @@ const ViewReportsTabFilteredByBarangay = () => {
     setUserRole(session?.user?.user_metadata?.role || null);
   }, []);
 
-  useEffect(() => {
-  const session = JSON.parse(sessionStorage.getItem('session'));
-  const brgy = session?.user?.user_metadata?.barangay || null;
-  setUserBarangay(brgy);
-  setUserRole(session?.user?.user_metadata?.role || null);
-
-  console.log('[User Barangay]', brgy);  // <-- here it is, logging your barangay info
-}, []);
-
-
   const fetchReports = async (pageNumber = 1) => {
     if (!userRole) return;
     setLoading(true);
@@ -86,25 +76,22 @@ const ViewReportsTabFilteredByBarangay = () => {
       const json = await res.json();
       console.log('🔥 Full reports API response:', json);
 
-        let filteredReports = json.data || [];
+      let filteredReports = json.data || [];
 
-        if (userRole === 'S') {
-        // Superadmin sees ALL reports, no filter
+      if (userRole === 'S') {
         filteredReports = json.data || [];
-        } else if (userBarangay) {
-        // Regular user sees only their barangay’s reports
+      } else if (userBarangay) {
         filteredReports = json.data.filter(report => report.barangay === userBarangay);
-        }
-
+      }
 
       // Filter by tab:
       // 0 = approved => report_status === "A"
       // 1 = pending => report_status === "P"
-      // 2 = rejected => report_status !== "A" && !== "P"
+      // 2 = rejected => report_status === "D"
       const tabFilteredReports = filteredReports.filter((r) => {
         if (activeTab === 0) return r.report_status === 'A';
         if (activeTab === 1) return r.report_status === 'P';
-        return r.report_status !== 'A' && r.report_status !== 'P';
+        return r.report_status === 'D';
       });
 
       setReports(tabFilteredReports);
@@ -165,6 +152,7 @@ const ViewReportsTabFilteredByBarangay = () => {
           />
         </Tabs>
 
+        {/* Table */}
         {loading ? (
           <TableContainer>
             <Table size="small" aria-label="loading reports skeleton">
@@ -172,18 +160,18 @@ const ViewReportsTabFilteredByBarangay = () => {
                 <TableRow>
                   <StyledTableCell>Report Name</StyledTableCell>
                   <StyledTableCell>Submitted On</StyledTableCell>
+                  {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
                   <StyledTableCell align="right">Actions</StyledTableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {[...Array(SKELETON_ROW_COUNT)].map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton variant="text" width="60%" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton variant="text" width="40%" />
-                    </TableCell>
+                    <TableCell><Skeleton variant="text" width="60%" /></TableCell>
+                    <TableCell><Skeleton variant="text" width="40%" /></TableCell>
+                    {activeTab === 2 && (
+                      <TableCell><Skeleton variant="text" width="70%" /></TableCell>
+                    )}
                     <TableCell align="right">
                       <Skeleton variant="rectangular" width={90} height={30} sx={{ borderRadius: 1 }} />
                     </TableCell>
@@ -207,6 +195,7 @@ const ViewReportsTabFilteredByBarangay = () => {
                 <TableRow>
                   <StyledTableCell>Report Name</StyledTableCell>
                   <StyledTableCell>Submitted On</StyledTableCell>
+                  {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
                   <StyledTableCell align="right">Actions</StyledTableCell>
                 </TableRow>
               </TableHead>
@@ -215,6 +204,22 @@ const ViewReportsTabFilteredByBarangay = () => {
                   <TableRow key={report.report_id}>
                     <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
                     <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
+
+                    {/* Show remarks only for rejected reports */}
+                    {activeTab === 2 && (
+                      <TableCell
+                        sx={{
+                          whiteSpace: 'normal',
+                          maxWidth: 300,
+                          wordBreak: 'break-word',
+                          fontStyle: report.remarks ? 'normal' : 'italic',
+                          color: report.remarks ? 'inherit' : 'gray',
+                        }}
+                      >
+                        {report.remarks || 'No remarks provided'}
+                      </TableCell>
+                    )}
+
                     <TableCell align="right">
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
                         <Button
