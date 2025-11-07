@@ -40,7 +40,7 @@ const ReportsTable = ({
   loginBtnStyles,
   btnOutlinedStyles,
   activeTab, // 0 = Pending, 1 = Approved, 2 = Denied
-  loading,  // <--- add loading prop here
+  loading,
 }) => {
   const statusMap = {
     0: 'P',
@@ -61,6 +61,7 @@ const ReportsTable = ({
             <TableRow>
               <StyledTableCell>Report Name</StyledTableCell>
               <StyledTableCell>Submitted On</StyledTableCell>
+              {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
               <StyledTableCell align="right">Actions</StyledTableCell>
             </TableRow>
           </TableHead>
@@ -69,8 +70,16 @@ const ReportsTable = ({
               <TableRow key={i}>
                 <TableCell><Skeleton variant="text" width={150} /></TableCell>
                 <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                {activeTab === 2 && (
+                  <TableCell><Skeleton variant="text" width={180} /></TableCell>
+                )}
                 <TableCell align="right">
-                  <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="nowrap">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="flex-end"
+                    flexWrap="nowrap"
+                  >
                     <Skeleton variant="rectangular" width={80} height={32} />
                     <Skeleton variant="rectangular" width={80} height={32} />
                     <Skeleton variant="rectangular" width={60} height={32} />
@@ -91,13 +100,18 @@ const ReportsTable = ({
           <TableRow>
             <StyledTableCell>Report Name</StyledTableCell>
             <StyledTableCell>Submitted On</StyledTableCell>
+            {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
             <StyledTableCell align="right">Actions</StyledTableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {filteredReports.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={3} align="center" sx={{ py: 3, fontStyle: 'italic' }}>
+              <TableCell
+                colSpan={activeTab === 2 ? 4 : 3}
+                align="center"
+                sx={{ py: 3, fontStyle: 'italic' }}
+              >
                 No reports found for this category.
               </TableCell>
             </TableRow>
@@ -105,9 +119,32 @@ const ReportsTable = ({
             filteredReports.map((report) => (
               <TableRow key={report.report_id} hover>
                 <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
-                <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
+                <TableCell>
+                  {new Date(report.created_at).toLocaleString()}
+                </TableCell>
+
+                {/* Show remarks column only for denied reports */}
+                {activeTab === 2 && (
+                  <TableCell
+                    sx={{
+                      whiteSpace: 'normal',
+                      maxWidth: 300,
+                      wordBreak: 'break-word',
+                      fontStyle: report.remarks ? 'normal' : 'italic',
+                      color: report.remarks ? 'inherit' : 'gray',
+                    }}
+                  >
+                    {report.remarks || 'No remarks provided'}
+                  </TableCell>
+                )}
+
                 <TableCell align="right">
-                  <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="nowrap">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="flex-end"
+                    flexWrap="nowrap"
+                  >
                     {activeTab === 0 && (
                       <>
                         <Button
@@ -121,10 +158,18 @@ const ReportsTable = ({
                             )
                           }
                           onClick={() => onApprove(report.report_id)}
-                          sx={{ ...loginBtnStyles, minWidth: 90, px: 1.5, borderRadius: 2, textTransform: 'none' }}
+                          sx={{
+                            ...loginBtnStyles,
+                            minWidth: 90,
+                            px: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                          }}
                           disabled={approvingReportId === report.report_id}
                         >
-                          {approvingReportId === report.report_id ? 'Approving...' : 'Approve'}
+                          {approvingReportId === report.report_id
+                            ? 'Approving...'
+                            : 'Approve'}
                         </Button>
                         <Button
                           variant="outlined"
@@ -137,7 +182,13 @@ const ReportsTable = ({
                             )
                           }
                           onClick={() => onReject(report.report_id)}
-                          sx={{ ...btnOutlinedStyles, minWidth: 80, px: 1.5, borderRadius: 2, textTransform: 'none' }}
+                          sx={{
+                            ...btnOutlinedStyles,
+                            minWidth: 80,
+                            px: 1.5,
+                            borderRadius: 2,
+                            textTransform: 'none',
+                          }}
                           disabled={rejectingReportId === report.report_id}
                         >
                           Reject
@@ -149,7 +200,13 @@ const ReportsTable = ({
                       size="small"
                       startIcon={<PictureAsPdfOutlinedIcon />}
                       onClick={() => window.open(report.fileUrl, '_blank')}
-                      sx={{ ...loginBtnStyles, minWidth: 80, px: 1.5, borderRadius: 2, textTransform: 'none' }}
+                      sx={{
+                        ...loginBtnStyles,
+                        minWidth: 80,
+                        px: 1.5,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                      }}
                     >
                       PDF
                     </Button>
