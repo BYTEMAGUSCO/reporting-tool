@@ -8,6 +8,12 @@ import {
   Stack,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
 } from '@mui/material';
 
 import ReportIcon from '@mui/icons-material/Report';
@@ -26,7 +32,9 @@ const ViewReportsTabFilteredByBarangay = () => {
   const [userRole, setUserRole] = useState(null);
   const [approvingReportId, setApprovingReportId] = useState(null);
   const [rejectingReportId, setRejectingReportId] = useState(null);
-  const [activeTab, setActiveTab] = useState(0); // 0: Pending, 1: Approved, 2: Rejected
+  const [activeTab, setActiveTab] = useState(0);
+  const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
+  const [remarks, setRemarks] = useState('');
 
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
@@ -44,16 +52,18 @@ const ViewReportsTabFilteredByBarangay = () => {
   const statusMap = {
     0: 'P', // Pending
     1: 'A', // Approved
-    2: 'D', // Denied/Rejected
+    2: 'D', // Denied
   };
 
-  // Filter reports here by status so the table gets only relevant ones
-  const filteredReports = reports.filter(report => report.report_status === statusMap[activeTab]);
+  const filteredReports = reports.filter(
+    (report) => report.report_status === statusMap[activeTab]
+  );
 
   const handleApprove = async (reportId) => {
     setApprovingReportId(reportId);
     try {
-      const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+      const token =
+        JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
         'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/approve-report',
         {
@@ -72,8 +82,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       }
 
       await showSuccessAlert('Report approved! 🎉');
-
-      fetchReports(page); // refresh after approval
+      fetchReports(page);
     } catch (error) {
       await showErrorAlert(`Failed to approve: ${error.message}`);
     } finally {
@@ -81,10 +90,23 @@ const ViewReportsTabFilteredByBarangay = () => {
     }
   };
 
-  const handleReject = async (reportId) => {
+  // Opens the remarks dialog before submitting the rejection
+  const handleReject = (reportId) => {
     setRejectingReportId(reportId);
+    setRemarks('');
+    setRemarksDialogOpen(true);
+  };
+
+  // Handles submitting the remarks
+  const handleSubmitRemarks = async () => {
+    if (!remarks.trim()) {
+      await showErrorAlert('Please enter remarks before rejecting.');
+      return;
+    }
+
     try {
-      const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+      const token =
+        JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
         'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/deny-report',
         {
@@ -93,7 +115,10 @@ const ViewReportsTabFilteredByBarangay = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ report_id: reportId }),
+          body: JSON.stringify({
+            report_id: rejectingReportId,
+            remarks: remarks.trim(),
+          }),
         }
       );
 
@@ -102,19 +127,20 @@ const ViewReportsTabFilteredByBarangay = () => {
         throw new Error(err.error || 'Failed to reject report');
       }
 
-      await showSuccessAlert('Report rejected!');
-
-      fetchReports(page); // refresh after rejection
+      await showSuccessAlert('Report rejected with remarks!');
+      fetchReports(page);
+      setRemarksDialogOpen(false);
     } catch (error) {
       await showErrorAlert(`Failed to reject: ${error.message}`);
     } finally {
       setRejectingReportId(null);
+      setRemarks('');
     }
   };
 
   const handleTabChange = (_, newValue) => {
     setActiveTab(newValue);
-    setPage(1); // reset page on tab change, keeps pagination sane
+    setPage(1);
   };
 
   return (
@@ -137,35 +163,22 @@ const ViewReportsTabFilteredByBarangay = () => {
           variant="fullWidth"
           aria-label="reports filter tabs"
         >
-          <Tab
-            icon={<HourglassBottomIcon />}
-            iconPosition="start"
-            label="Pending"
-          />
-          <Tab
-            icon={<DoneAllIcon />}
-            iconPosition="start"
-            label="Approved"
-          />
-          <Tab
-            icon={<BlockIcon />}
-            iconPosition="start"
-            label="Rejected"
-          />
+          <Tab icon={<HourglassBottomIcon />} label="Pending" />
+          <Tab icon={<DoneAllIcon />} label="Approved" />
+          <Tab icon={<BlockIcon />} label="Rejected" />
         </Tabs>
       </Paper>
 
-      {/* Pass loading to ReportsTable to trigger skeleton loading */}
       <ReportsTable
-        reports={filteredReports} // only filtered reports here
+        reports={filteredReports}
         approvingReportId={approvingReportId}
         rejectingReportId={rejectingReportId}
         onApprove={handleApprove}
         onReject={handleReject}
         loginBtnStyles={loginBtnStyles}
         btnOutlinedStyles={btnOutlinedStyles}
-        activeTab={activeTab} // for button logic if needed
-        loading={loading} // <-- this is key for skeleton
+        activeTab={activeTab}
+        loading={loading}
       />
 
       <Box mt={2} display="flex" justifyContent="center">
@@ -176,6 +189,35 @@ const ViewReportsTabFilteredByBarangay = () => {
           color="primary"
         />
       </Box>
+
+      {/* Remarks Dialog */}
+      <Dialog open={remarksDialogOpen} onClose={() => setRemarksDialogOpen(false)}>
+        <DialogTitle>Reject Report</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1 }}>
+            Please provide remarks or reasons for rejecting this report:
+          </Typography>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Remarks"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemarksDialogOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmitRemarks} variant="contained" color="error">
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
