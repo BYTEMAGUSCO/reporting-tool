@@ -66,20 +66,16 @@ const CreateReportTab = () => {
           return;
         }
 
-        // ✅ Fixed Parsing: handle both string and already-parsed objects safely
         let parsed;
         try {
-          parsed = typeof form.form_content === 'string'
-            ? JSON.parse(form.form_content)
-            : form.form_content;
+          parsed =
+            typeof form.form_content === 'string'
+              ? JSON.parse(form.form_content)
+              : form.form_content;
         } catch (err) {
           console.error('❌ Failed to parse form_content:', err);
           parsed = [];
         }
-
-        // Debug logging (optional)
-        console.log('📦 Raw form content:', form.form_content);
-        console.log('✅ Parsed form questions:', parsed);
 
         if (!Array.isArray(parsed)) {
           await showErrorAlert('Form structure is invalid.');
@@ -161,17 +157,19 @@ const CreateReportTab = () => {
       });
       y -= 40;
 
-      // Answers
+      // ===============================
+      // 🧩 Improved answer rendering (fixes [object Object])
+      // ===============================
       Object.entries(formJSON.answers).forEach(([questionId, answer], index) => {
         const question = selectedQuestions.find((q) => q.id === questionId);
         const questionText = stripUnsupportedChars(question?.label || 'Unknown');
-        const answerText = stripUnsupportedChars(answer);
 
-        if (y < 80) {
+        if (y < 100) {
           page = pdfDoc.addPage([600, 800]);
           y = height - 50;
         }
 
+        // Question title
         page.drawText(`${index + 1}. ${questionText}`, {
           x: 50,
           y,
@@ -181,14 +179,58 @@ const CreateReportTab = () => {
         });
         y -= 18;
 
-        page.drawText(answerText, {
-          x: 60,
-          y,
-          size: 12,
-          font: fontRegular,
-          color: rgb(0, 0, 0),
-        });
-        y -= 25;
+        // 🟡 Handle Excel/table questions properly
+        if (question?.type === 'table' && question.config) {
+          const { columns = [], rows = [] } = question.config;
+          const tableData = answer ?? {};
+
+          // Column headers
+          const headers = columns.map((col) => col.label || '').join(' | ');
+          page.drawText(headers, { x: 70, y, size: 10, font: fontBold, color: rgb(0, 0, 0) });
+          y -= 14;
+
+          // Each row of answers
+          rows.forEach((row, rIndex) => {
+            const rowAnswers = tableData?.[rIndex] || {};
+            const cells = columns
+              .map((col) => (rowAnswers[col.key] ? String(rowAnswers[col.key]) : ''))
+              .join(' | ');
+            const line = `${row.label || ''}: ${cells}`;
+
+            page.drawText(line, {
+              x: 70,
+              y,
+              size: 10,
+              font: fontRegular,
+              color: rgb(0, 0, 0),
+            });
+            y -= 14;
+
+            if (y < 80) {
+              page = pdfDoc.addPage([600, 800]);
+              y = height - 50;
+            }
+          });
+
+          y -= 10;
+        } else {
+          // Regular question types
+          const answerText =
+            typeof answer === 'object'
+              ? JSON.stringify(answer)
+              : Array.isArray(answer)
+              ? answer.join(', ')
+              : stripUnsupportedChars(answer ?? '');
+
+          page.drawText(answerText, {
+            x: 60,
+            y,
+            size: 12,
+            font: fontRegular,
+            color: rgb(0, 0, 0),
+          });
+          y -= 25;
+        }
       });
 
       const pdfBytes = await pdfDoc.save();

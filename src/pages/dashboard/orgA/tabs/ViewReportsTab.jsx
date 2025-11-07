@@ -102,7 +102,7 @@ const ViewReportsTabFilteredByBarangay = () => {
         throw new Error(err.error || 'Failed to reject report');
       }
 
-      await showSuccessAlert('Report rejected! 💀');
+      await showSuccessAlert('Report rejected!');
 
       fetchReports(page); // refresh after rejection
     } catch (error) {

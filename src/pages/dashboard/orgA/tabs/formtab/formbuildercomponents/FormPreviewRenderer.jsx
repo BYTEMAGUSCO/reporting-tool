@@ -1,4 +1,4 @@
-import { Box, IconButton, Button, CircularProgress } from '@mui/material';
+import { Box, IconButton, Button, CircularProgress, Typography } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import QuestionRenderer from './QuestionRenderer';
 import QuestionEditor from './QuestionEditor';
@@ -26,7 +26,6 @@ const FormPreviewRenderer = ({
   const [formAnswers, setFormAnswers] = useState({});
   const [loadingButtons, setLoadingButtons] = useState({});
 
-  // Initialize answers for submit mode
   useEffect(() => {
     if (mode === 'submit') {
       setFormAnswers(answers || {});
@@ -68,8 +67,19 @@ const FormPreviewRenderer = ({
   return (
     <Box>
       {questions.map((q) => (
-        <Box key={q.id} mt={3} p={2} border="1px solid #ccc" borderRadius={2}>
-          {/* Delete button (only available in edit mode) */}
+        <Box
+          key={q.id}
+          id={q.id}
+          mt={3}
+          p={2}
+          border="1px solid #ccc"
+          borderRadius={2}
+          sx={{
+            backgroundColor: q.type === 'footer' ? '#f6f6f6' : 'white',
+            borderStyle: q.type === 'footer' ? 'dashed' : 'solid',
+          }}
+        >
+          {/* Delete button */}
           <Box display="flex" justifyContent="flex-end" alignItems="center">
             {mode === 'edit' && (
               <IconButton
@@ -90,94 +100,236 @@ const FormPreviewRenderer = ({
                 EDIT MODE
           ======================= */}
           {mode === 'edit' && (
-            q.type === 'table' ? (
-              <ExcelQuestionRenderer
-                q={q}
-                mode="edit"
-                addRow={addRow}
-                removeRow={removeRow}
-                addColumn={addColumn} // ✅ FIXED: Pass addColumn
-                toggleColumnEditable={toggleColumnEditable}
-                // 🟢 Update column label
-                updateColumnLabel={(id, colIndex, newLabel) => {
-                  const updatedColumns = q.config.columns.map((col, i) =>
-                    i === colIndex ? { ...col, label: newLabel } : col
-                  );
+            <>
+              {q.type === 'table' ? (
+                <ExcelQuestionRenderer
+                  q={q}
+                  mode="edit"
+                  addRow={addRow}
+                  removeRow={removeRow}
+                  addColumn={addColumn}
+                  toggleColumnEditable={toggleColumnEditable}
+                  updateColumnLabel={(id, colIndex, newLabel) => {
+                    const updatedColumns = q.config.columns.map((col, i) =>
+                      i === colIndex ? { ...col, label: newLabel } : col
+                    );
+                    updateQuestion(id, 'config', {
+                      ...q.config,
+                      columns: updatedColumns,
+                    });
+                  }}
+                  updateRowLabel={(id, rowIdx, newLabel) => {
+                    updateQuestion(id, 'config', {
+                      ...q.config,
+                      rows: q.config.rows.map((r, i) =>
+                        i === rowIdx ? { ...r, label: newLabel } : r
+                      ),
+                    });
+                  }}
+                  updateRowHeaderLabel={(id, newLabel) => {
+                    updateQuestion(id, 'config', {
+                      ...q.config,
+                      rowHeaderLabel: newLabel,
+                    });
+                  }}
+                  updateQuestionLabel={(id, newLabel) =>
+                    updateQuestion(id, 'label', newLabel)
+                  }
+                />
+              ) : q.type === 'footer' ? (
+                // 🟣 Footer Section — Editable Version
+                <>
+                  <QuestionEditor
+                    q={q}
+                    updateQuestion={updateQuestion}
+                    updateOption={updateOption}
+                    addOption={addOption}
+                    removeOption={removeOption}
+                  />
 
-                  updateQuestion(id, 'config', {
-                    ...q.config,
-                    columns: updatedColumns,
-                  });
-                }}
-                // 🟢 Update row label
-                updateRowLabel={(id, rowIdx, newLabel) => {
-                  updateQuestion(id, 'config', {
-                    ...q.config,
-                    rows: q.config.rows.map((r, i) =>
-                      i === rowIdx ? { ...r, label: newLabel } : r
-                    ),
-                  });
-                }}
-                // 🟢 Update row header label
-                updateRowHeaderLabel={(id, newLabel) => {
-                  updateQuestion(id, 'config', {
-                    ...q.config,
-                    rowHeaderLabel: newLabel,
-                  });
-                }}
-                // 🟢 Update table name (label)
-                updateQuestionLabel={(id, newLabel) => updateQuestion(id, 'label', newLabel)}
-              />
-            ) : (
-              <QuestionEditor
-                q={q}
-                updateQuestion={updateQuestion}
-                updateOption={updateOption}
-                addOption={addOption}
-                removeOption={removeOption}
-              />
-            )
+                  {/* Optional Live Preview Below the Editor */}
+                  <Box
+                    textAlign="center"
+                    p={2}
+                    mt={2}
+                    border="1px dashed #aaa"
+                    borderRadius={2}
+                    bgcolor="#fafafa"
+                  >
+                    <Typography
+                      variant="subtitle1"
+                      fontWeight="bold"
+                      gutterBottom
+                      sx={{ color: '#444' }}
+                    >
+                      Live Footer Preview
+                    </Typography>
+
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      mt={3}
+                      mb={2}
+                      px={5}
+                    >
+                      <Box>
+                        <Typography fontSize={13}>
+                          {q.config.preparedByLabel || 'Prepared by'}:
+                        </Typography>
+                        <Typography
+                          sx={{
+                            textDecoration: 'underline',
+                            minWidth: 160,
+                            height: 18,
+                          }}
+                        >
+                          &nbsp;
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {q.config.preparedByRole || 'Role'} (Signature over Printed Name)
+                        </Typography>
+                      </Box>
+
+                      <Box>
+                        <Typography fontSize={13}>
+                          {q.config.submittedByLabel || 'Submitted by'}:
+                        </Typography>
+                        <Typography
+                          sx={{
+                            textDecoration: 'underline',
+                            minWidth: 160,
+                            height: 18,
+                          }}
+                        >
+                          &nbsp;
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {q.config.submittedByRole || 'Role'} (Signature over Printed Name)
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {q.config.showDate && (
+                      <Typography fontSize={13} mt={2}>
+                        Date Accomplished: ______________________
+                      </Typography>
+                    )}
+
+                    <Typography
+                      variant="caption"
+                      mt={1}
+                      color="text.secondary"
+                      fontStyle="italic"
+                    >
+                      {q.config.noteText ||
+                        'Note: This form is generated and submitted through the Barangay Management System (BMS).'}
+                    </Typography>
+                  </Box>
+                </>
+              ) : (
+                <QuestionEditor
+                  q={q}
+                  updateQuestion={updateQuestion}
+                  updateOption={updateOption}
+                  addOption={addOption}
+                  removeOption={removeOption}
+                />
+              )}
+            </>
           )}
 
           {/* ======================
                 PREVIEW MODE
           ======================= */}
           {mode === 'preview' && (
-            q.type === 'table' ? (
-              <ExcelQuestionRenderer
-                q={q}
-                mode="preview"
-                answers={formAnswers}
-                setAnswers={setFormAnswers}
-              />
-            ) : (
-              <QuestionRenderer q={q} disabled />
-            )
+            <>
+              {q.type === 'table' ? (
+                <ExcelQuestionRenderer
+                  q={q}
+                  mode="preview"
+                  answers={formAnswers}
+                  setAnswers={setFormAnswers}
+                />
+              ) : q.type === 'footer' ? (
+                <Box textAlign="center" p={2}>
+                  <Typography fontWeight="bold" mb={1}>
+                    {q.label || 'Footer Section'}
+                  </Typography>
+
+                  <Box
+                    display="flex"
+                    justifyContent="space-between"
+                    mt={2}
+                    mb={2}
+                    px={5}
+                  >
+                    <Box>
+                      <Typography fontSize={13}>{q.config.preparedByLabel}</Typography>
+                      <Typography sx={{ textDecoration: 'underline', minWidth: 160 }}>
+                        &nbsp;
+                      </Typography>
+                      <Typography variant="caption">
+                        {q.config.preparedByRole}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography fontSize={13}>{q.config.submittedByLabel}</Typography>
+                      <Typography sx={{ textDecoration: 'underline', minWidth: 160 }}>
+                        &nbsp;
+                      </Typography>
+                      <Typography variant="caption">
+                        {q.config.submittedByRole}
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {q.config.showDate && (
+                    <Typography fontSize={13}>
+                      Date Accomplished: ______________________
+                    </Typography>
+                  )}
+                  <Typography variant="caption" mt={1} color="text.secondary">
+                    {q.config.noteText}
+                  </Typography>
+                </Box>
+              ) : (
+                <QuestionRenderer q={q} disabled />
+              )}
+            </>
           )}
 
           {/* ======================
                 SUBMIT MODE
           ======================= */}
           {mode === 'submit' && (
-            q.type === 'table' ? (
-              <ExcelQuestionRenderer
-                q={q}
-                mode="submit"
-                answers={formAnswers}
-                setAnswers={setFormAnswers}
-                addRow={addRow}
-                removeRow={removeRow}
-                updateColumnLabel={updateColumn}
-              />
-            ) : (
-              <QuestionRenderer
-                q={q}
-                mode="submit"
-                answers={formAnswers}
-                setAnswers={setFormAnswers}
-                onAnswerChange={handleAnswerChange}
-              />
-            )
+            <>
+              {q.type === 'table' ? (
+                <ExcelQuestionRenderer
+                  q={q}
+                  mode="submit"
+                  answers={formAnswers}
+                  setAnswers={setFormAnswers}
+                  addRow={addRow}
+                  removeRow={removeRow}
+                  updateColumnLabel={updateColumn}
+                />
+              ) : q.type === 'footer' ? (
+                <Box textAlign="center" mt={3}>
+                  <Typography variant="body2" color="text.secondary">
+                    {q.config.noteText}
+                  </Typography>
+                </Box>
+              ) : (
+                <QuestionRenderer
+                  q={q}
+                  mode="submit"
+                  answers={formAnswers}
+                  setAnswers={setFormAnswers}
+                  onAnswerChange={handleAnswerChange}
+                />
+              )}
+            </>
           )}
         </Box>
       ))}

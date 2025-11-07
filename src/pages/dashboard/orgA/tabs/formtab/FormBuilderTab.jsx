@@ -5,6 +5,7 @@ import {
   Typography,
   Paper,
   Divider,
+  Button,
 } from '@mui/material';
 import BuildIcon from '@mui/icons-material/Build';
 import FormQuestion from '../models/FormQuestion';
@@ -54,6 +55,25 @@ const FormBuilderTab = () => {
     }, 100);
   };
 
+  // ===== 🟣 Footer Section =====
+  const addFooterSection = () => {
+    if (mode !== 'edit') return;
+
+    const alreadyHasFooter = questions.some((q) => q.type === 'footer');
+    if (alreadyHasFooter) {
+      showErrorAlert('A footer section already exists in this form.');
+      return;
+    }
+
+    const newFooter = new FormQuestion('Footer Section', 'footer', [], {});
+    setQuestions((prev) => [...prev, newFooter]);
+
+    setTimeout(() => {
+      const element = document.getElementById(newFooter.id);
+      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
   // ===== Delete Question =====
   const deleteQuestion = (id) => {
     if (mode !== 'edit') return;
@@ -78,7 +98,18 @@ const FormBuilderTab = () => {
               rows: [{ label: 'Row 1' }],
               rowHeaderLabel: 'Row Name',
             };
-          } else if (key === 'type' && value !== 'table') {
+          } else if (key === 'type' && value === 'footer') {
+            instance.type = 'footer';
+            instance.config = {
+              preparedByLabel: 'Prepared by',
+              submittedByLabel: 'Submitted by',
+              preparedByRole: 'Barangay Secretary',
+              submittedByRole: 'Punong Barangay',
+              showDate: true,
+              noteText:
+                'Note: This form is generated and submitted through the Barangay Management System (BMS).',
+            };
+          } else if (key === 'type' && value !== 'table' && value !== 'footer') {
             instance.type = value;
             instance.config = {};
           } else {
@@ -285,6 +316,28 @@ const FormBuilderTab = () => {
           onSave={handleSave}
           saving={saving}
         />
+
+        {/* New Footer Button */}
+        {mode === 'edit' && (
+ <Button
+  variant="contained"
+  onClick={addFooterSection}
+  sx={{
+    backgroundColor: '#0850eaff !important', // 🟡 yellow-500 (important color)
+    color: '#ffffffff !important',
+    textTransform: 'none !important',
+    fontWeight: '600 !important',
+    borderRadius: '8px !important',
+    px: 2,
+    '&:hover': {
+      backgroundColor: '#ca8a04 !important', // darker yellow-600
+    },
+  }}
+>
+  Add Footer Section
+</Button>
+
+        )}
       </Paper>
 
       <Divider sx={{ mb: 0 }} />

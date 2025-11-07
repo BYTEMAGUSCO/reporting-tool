@@ -17,6 +17,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import { useState } from 'react';
 import { styled } from '@mui/material/styles';
 
+// ✅ Visibility toggle (color-locked)
 const VisibilitySwitch = styled(Switch)(({ theme }) => ({
   width: 50,
   height: 28,
@@ -27,11 +28,11 @@ const VisibilitySwitch = styled(Switch)(({ theme }) => ({
     transitionDuration: '300ms',
     '&.Mui-checked': {
       transform: 'translateX(22px)',
-      color: '#fff',
+      color: '#fff !important',
       '& + .MuiSwitch-track': {
-        background: 'linear-gradient(to right, #22c55e, #16a34a)', // soft green gradient
-        opacity: 1,
-        border: 0,
+        backgroundColor: '#22c55e !important', // ✅ green (visible)
+        opacity: '1 !important',
+        border: '0 !important',
       },
     },
   },
@@ -40,21 +41,20 @@ const VisibilitySwitch = styled(Switch)(({ theme }) => ({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#ffffff !important',
     transition: theme.transitions.create(['background-color'], {
       duration: 300,
     }),
   },
   '& .MuiSwitch-track': {
     borderRadius: 14,
-    background: 'linear-gradient(to right, #f87171, #dc2626)', // soft red gradient
-    opacity: 1,
+    backgroundColor: '#ef4444 !important', // ❌ red (hidden)
+    opacity: '1 !important',
     transition: theme.transitions.create(['background-color'], {
       duration: 500,
     }),
   },
 }));
-
 
 const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFormId }) => {
   const [togglingId, setTogglingId] = useState(null);
@@ -67,19 +67,35 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
   };
 
   return (
-    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
+    <TableContainer component={Paper} sx={{ borderRadius: 2, overflow: 'hidden' }}>
       <Table>
         <TableHead>
-          <TableRow>
-            <TableCell><strong>Form Name</strong></TableCell>
-            <TableCell><strong>Created At</strong></TableCell>
-            <TableCell><strong>Visible</strong></TableCell>
-            <TableCell align="right"><strong>Actions</strong></TableCell>
+          <TableRow sx={{ backgroundColor: '#f3f4f6 !important' }}>
+            <TableCell>
+              <strong>Form Name</strong>
+            </TableCell>
+            <TableCell>
+              <strong>Created At</strong>
+            </TableCell>
+            <TableCell>
+              <strong>Visible</strong>
+            </TableCell>
+            <TableCell align="right">
+              <strong>Actions</strong>
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {forms.map((form) => (
-            <TableRow key={form.form_id} hover>
+            <TableRow
+              key={form.form_id}
+              hover
+              sx={{
+                '&:hover': {
+                  backgroundColor: '#f9fafb !important',
+                },
+              }}
+            >
               <TableCell>{form.form_name}</TableCell>
               <TableCell>{new Date(form.created_at).toLocaleString()}</TableCell>
               <TableCell>
@@ -88,7 +104,7 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
                   arrow
                   placement="top"
                 >
-                  <span> {/* Tooltip fix for disabled switch */}
+                  <span>
                     <VisibilitySwitch
                       checked={form.is_visible === 'Y'}
                       onChange={() => handleToggle(form)}
@@ -100,19 +116,30 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
               </TableCell>
               <TableCell align="right">
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
+                  {/* 👁️ Preview button — blue */}
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     size="small"
                     onClick={() => onPreview(form)}
                     startIcon={<VisibilityIcon />}
-                    sx={{ borderRadius: 2, textTransform: 'none' }}
+                    sx={{
+                      borderRadius: '8px !important',
+                      textTransform: 'none !important',
+                      fontWeight: '600 !important',
+                      backgroundColor: '#3b82f6 !important', // blue-500
+                      color: '#ffffff !important',
+                      '&:hover': {
+                        backgroundColor: '#2563eb !important', // blue-600
+                      },
+                    }}
                   >
                     Preview
                   </Button>
+
+                  {/* 🗑️ Delete button — red */}
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     size="small"
-                    color="error"
                     onClick={() => onDelete(form.form_id)}
                     disabled={deletingFormId === form.form_id}
                     startIcon={
@@ -122,7 +149,16 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
                         <DeleteOutlineIcon />
                       )
                     }
-                    sx={{ borderRadius: 2, textTransform: 'none' }}
+                    sx={{
+                      borderRadius: '8px !important',
+                      textTransform: 'none !important',
+                      fontWeight: '600 !important',
+                      backgroundColor: '#ef4444 !important', // red-500
+                      color: '#ffffff !important',
+                      '&:hover': {
+                        backgroundColor: '#dc2626 !important', // red-600
+                      },
+                    }}
                   >
                     {deletingFormId === form.form_id ? 'Deleting...' : 'Delete'}
                   </Button>
@@ -130,9 +166,14 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
               </TableCell>
             </TableRow>
           ))}
+
           {forms.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} align="center">
+              <TableCell
+                colSpan={4}
+                align="center"
+                sx={{ py: 3, color: '#9ca3af !important', fontWeight: '500 !important' }}
+              >
                 No forms found.
               </TableCell>
             </TableRow>

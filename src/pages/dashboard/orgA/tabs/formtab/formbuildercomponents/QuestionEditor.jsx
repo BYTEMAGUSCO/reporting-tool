@@ -1,17 +1,4 @@
-import {
-  Box,
-  TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Button,
-  IconButton,
-  Switch,
-  FormControlLabel,
-  Typography,
-} from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Box, TextField, Typography, Divider, Switch, FormControlLabel } from '@mui/material';
 
 const QuestionEditor = ({
   q,
@@ -19,102 +6,165 @@ const QuestionEditor = ({
   updateOption,
   addOption,
   removeOption,
-  addColumn,
-  updateColumn,
-  removeColumn,
-  toggleColumnEditable,
 }) => {
-  const options = q.options || [];
-  const columns = q.config?.columns || [];
+  // Generic field update
+  const handleChange = (key, value) => {
+    updateQuestion(q.id, key, value);
+  };
 
+  // Config update helper
+  const updateConfig = (key, value) => {
+    updateQuestion(q.id, 'config', {
+      ...q.config,
+      [key]: value,
+    });
+  };
+
+  // 🎯 Handle footer fields separately
+  if (q.type === 'footer') {
+    return (
+      <Box>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Footer Section Settings
+        </Typography>
+
+        <TextField
+          label="Prepared By Label"
+          fullWidth
+          size="small"
+          sx={{ my: 1 }}
+          value={q.config.preparedByLabel || ''}
+          onChange={(e) => updateConfig('preparedByLabel', e.target.value)}
+        />
+
+        <TextField
+          label="Prepared By Role"
+          fullWidth
+          size="small"
+          sx={{ my: 1 }}
+          value={q.config.preparedByRole || ''}
+          onChange={(e) => updateConfig('preparedByRole', e.target.value)}
+        />
+
+        <TextField
+          label="Submitted By Label"
+          fullWidth
+          size="small"
+          sx={{ my: 1 }}
+          value={q.config.submittedByLabel || ''}
+          onChange={(e) => updateConfig('submittedByLabel', e.target.value)}
+        />
+
+        <TextField
+          label="Submitted By Role"
+          fullWidth
+          size="small"
+          sx={{ my: 1 }}
+          value={q.config.submittedByRole || ''}
+          onChange={(e) => updateConfig('submittedByRole', e.target.value)}
+        />
+
+        <FormControlLabel
+          control={
+            <Switch
+              checked={q.config.showDate}
+              onChange={(e) => updateConfig('showDate', e.target.checked)}
+            />
+          }
+          label="Show Date Accomplished"
+          sx={{ my: 1 }}
+        />
+
+        <Divider sx={{ my: 2 }} />
+
+        <TextField
+          label="Note Text"
+          fullWidth
+          multiline
+          minRows={2}
+          size="small"
+          value={q.config.noteText || ''}
+          onChange={(e) => updateConfig('noteText', e.target.value)}
+        />
+      </Box>
+    );
+  }
+
+  // ✏️ Default editor for non-footer questions
   return (
-    <>
-      {/* Question Label */}
+    <Box>
       <TextField
-        fullWidth
         label="Question Label"
-        value={q.label}
-        onChange={(e) => updateQuestion(q.id, 'label', e.target.value)}
-        margin="normal"
+        fullWidth
+        size="small"
+        sx={{ mb: 1 }}
+        value={q.label || ''}
+        onChange={(e) => handleChange('label', e.target.value)}
       />
 
-      {/* Question Type */}
-      <FormControl fullWidth margin="normal">
-        <InputLabel>Question Type</InputLabel>
-        <Select
-          value={q.type}
-          label="Question Type"
-          onChange={(e) => updateQuestion(q.id, 'type', e.target.value)}
-        >
-          <MenuItem value="text">Text</MenuItem>
-          <MenuItem value="textarea">Paragraph</MenuItem>
-          <MenuItem value="multiple_choice">Multiple Choice</MenuItem>
-          <MenuItem value="checkbox">Checkboxes</MenuItem>
-          <MenuItem value="dropdown">Dropdown</MenuItem>
-          <MenuItem value="number">Number</MenuItem>
-          <MenuItem value="email">Email</MenuItem>
-          <MenuItem value="date">Date</MenuItem>
-          <MenuItem value="table">Excel Table</MenuItem>
-        </Select>
-      </FormControl>
+      <TextField
+        select
+        label="Question Type"
+        fullWidth
+        size="small"
+        SelectProps={{ native: true }}
+        value={q.type}
+        onChange={(e) => handleChange('type', e.target.value)}
+        sx={{ mb: 1 }}
+      >
+        <option value="text">Short Answer</option>
+        <option value="paragraph">Paragraph</option>
+        <option value="multiple_choice">Multiple Choice</option>
+        <option value="checkbox">Checkboxes</option>
+        <option value="dropdown">Dropdown</option>
+        <option value="table">Excel Table</option>
+        <option value="footer">Footer Section</option>
+      </TextField>
 
-      {/* Options for MC, checkbox, dropdown */}
+      {/* render options if multiple choice / checkbox / dropdown */}
       {['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && (
-        <Box mt={2}>
-          {options.map((opt, idx) => (
-            <Box key={idx} display="flex" alignItems="center" gap={1} mb={1}>
-              <TextField
-                fullWidth
-                label={`Option ${idx + 1}`}
-                value={opt}
-                onChange={(e) => updateOption(q.id, idx, e.target.value)}
-              />
-              <IconButton onClick={() => removeOption(q.id, idx)} color="error">
-                <DeleteIcon />
-              </IconButton>
-            </Box>
-          ))}
-          <Button onClick={() => addOption(q.id)}>➕ Add Option</Button>
-        </Box>
-      )}
-
-      {/* Excel Table Columns */}
-      {q.type === 'table' && (
-        <Box mt={3}>
-          <Typography variant="subtitle1" fontWeight={600} mb={1}>
-            Table Columns
+        <Box>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+            Options
           </Typography>
-
-          {columns.map((col, idx) => (
-            <Box key={idx} display="flex" alignItems="center" gap={1} mb={1}>
-              <TextField
-                fullWidth
-                label={`Column ${idx + 1} Name`}
-                value={col.label}
-                onChange={(e) =>
-                  updateColumn(q.id, idx, { label: e.target.value })
-                }
-              />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={col.editable ?? true}
-                    onChange={() => toggleColumnEditable(q.id, idx)}
-                    color="primary"
-                  />
-                }
-                label="Editable"
-              />
-              <IconButton onClick={() => removeColumn(q.id, idx)} color="error">
-                <DeleteIcon />
-              </IconButton>
-            </Box>
+          {q.options.map((opt, idx) => (
+            <TextField
+              key={idx}
+              fullWidth
+              size="small"
+              value={opt}
+              sx={{ mb: 1 }}
+              onChange={(e) => updateOption(q.id, idx, e.target.value)}
+              InputProps={{
+                endAdornment: (
+                  <span
+                    style={{
+                      color: 'red',
+                      cursor: 'pointer',
+                      marginLeft: '8px',
+                    }}
+                    onClick={() => removeOption(q.id, idx)}
+                  >
+                    ✕
+                  </span>
+                ),
+              }}
+            />
           ))}
-
-          <Button onClick={() => addColumn(q.id)}>➕ Add Column</Button>
+          <Typography
+            onClick={() => addOption(q.id)}
+            sx={{
+              fontSize: 13,
+              color: '#1976d2',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            + Add Option
+          </Typography>
         </Box>
       )}
-    </>
+    </Box>
   );
 };
 

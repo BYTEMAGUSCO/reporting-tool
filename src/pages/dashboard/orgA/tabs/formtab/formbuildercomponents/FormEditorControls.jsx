@@ -7,9 +7,9 @@ import SaveIcon from '@mui/icons-material/Save';
 
 const FormEditorControls = ({
   onAddQuestion,
-  onAddExcelQuestion, // ✅ Excel Table Button
-  mode,               
-  setMode,            
+  onAddExcelQuestion,
+  mode,
+  setMode,
   onSave,
   saving,
 }) => {
@@ -21,34 +21,44 @@ const FormEditorControls = ({
 
   return (
     <Box display="flex" gap={2} mb={2} flexWrap="wrap">
-      {/* Add Question Buttons */}
+      {/* ➕ Add Question Buttons */}
       {!isPreview && (
         <>
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={onAddQuestion}
             startIcon={<AddIcon />}
             sx={{
-              borderRadius: '0.5rem',
-              px: 2,
-              py: 1,
-              textTransform: 'none',
-              '&:hover': { backgroundColor: '#f97316' },
+              borderRadius: '8px !important',
+              px: '16px !important',
+              py: '8px !important',
+              textTransform: 'none !important',
+              fontWeight: '600 !important',
+              backgroundColor: '#3b82f6 !important', // Blue
+              color: '#ffffff !important',
+              '&:hover': {
+                backgroundColor: '#2563eb !important', // Darker Blue
+              },
             }}
           >
             Add Question
           </Button>
 
           <Button
-            variant="outlined"
+            variant="contained"
             onClick={onAddExcelQuestion}
             startIcon={<TableChartIcon />}
             sx={{
-              borderRadius: '0.5rem',
-              px: 2,
-              py: 1,
-              textTransform: 'none',
-              '&:hover': { backgroundColor: '#f97316' },
+              borderRadius: '8px !important',
+              px: '16px !important',
+              py: '8px !important',
+              textTransform: 'none !important',
+              fontWeight: '600 !important',
+              backgroundColor: '#10b981 !important', // Green
+              color: '#ffffff !important',
+              '&:hover': {
+                backgroundColor: '#059669 !important', // Darker Green
+              },
             }}
           >
             Add Excel Table
@@ -56,38 +66,51 @@ const FormEditorControls = ({
         </>
       )}
 
-      {/* Toggle Edit / Preview */}
+      {/* 👁️ Toggle Edit / Preview */}
       <Button
-        variant="outlined"
+        variant="contained"
         onClick={toggleMode}
         startIcon={isPreview ? <EditNoteIcon /> : <VisibilityIcon />}
         sx={{
-          borderRadius: '0.5rem',
-          px: 2,
-          py: 1,
-          textTransform: 'none',
-          '&:hover': { backgroundColor: '#f97316' },
+          borderRadius: '8px !important',
+          px: '16px !important',
+          py: '8px !important',
+          textTransform: 'none !important',
+          fontWeight: '600 !important',
+          backgroundColor: '#557e2fff !important', // Amber
+          color: '#ffffffff !important', // Almost black text
+          '&:hover': {
+            backgroundColor: '#1f3b04ff !important', // Darker Amber
+          },
         }}
       >
         {isPreview ? 'Switch to Edit' : 'Switch to Preview'}
       </Button>
 
-      {/* Save Button */}
+      {/* 💾 Save Button */}
       {!isPreview && (
         <Button
-          variant="outlined"
+          variant="contained"
           onClick={onSave}
           disabled={saving}
           startIcon={
             saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon />
           }
-          color={saving ? 'secondary' : 'primary'}
           sx={{
-            borderRadius: '0.5rem',
-            px: 2,
-            py: 1,
-            textTransform: 'none',
-            '&:hover': { backgroundColor: '#f97316' },
+            borderRadius: '8px !important',
+            px: '16px !important',
+            py: '8px !important',
+            textTransform: 'none !important',
+            fontWeight: '600 !important',
+            backgroundColor: saving
+              ? '#9ca3af !important' // gray while saving
+              : '#4f46e5 !important', // Indigo
+            color: '#ffffff !important',
+            '&:hover': {
+              backgroundColor: saving
+                ? '#9ca3af !important'
+                : '#4338ca !important', // Darker Indigo
+            },
           }}
         >
           {saving ? 'Saving...' : 'Save to Supabase'}

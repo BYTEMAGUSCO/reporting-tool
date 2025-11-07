@@ -7,9 +7,9 @@ class FormQuestion {
     this.type = type;
     this.options = options;
 
+    // 🟢 Handle special component types
     if (type === 'table') {
       this.config = {
-        // 🟢 Default columns: Question + Answer
         columns:
           Array.isArray(config.columns) && config.columns.length > 0
             ? config.columns
@@ -17,17 +17,30 @@ class FormQuestion {
                 { key: `col_${uuid().slice(0, 6)}`, label: 'Question', editable: true },
                 { key: `col_${uuid().slice(0, 6)}`, label: 'Answer', editable: true },
               ],
-
-        // 🟢 Always start with one row
         rows:
           Array.isArray(config.rows) && config.rows.length > 0
             ? config.rows
             : [{ label: 'Row 1' }],
-
-        // 🟢 Default "Row Name" header
         rowHeaderLabel: config.rowHeaderLabel || 'Row Name',
       };
-    } else {
+    }
+
+    // 🟣 New Footer Type
+    else if (type === 'footer') {
+      this.config = {
+        preparedByLabel: config.preparedByLabel || 'Prepared by',
+        submittedByLabel: config.submittedByLabel || 'Submitted by',
+        preparedByRole: config.preparedByRole || 'Barangay Secretary',
+        submittedByRole: config.submittedByRole || 'Punong Barangay',
+        showDate: config.showDate ?? true,
+        noteText:
+          config.noteText ||
+          'Note: This form is generated and submitted through the Report Management System.',
+      };
+    }
+
+    // ⚙️ Default config for other question types
+    else {
       this.config = config;
     }
   }
@@ -110,10 +123,17 @@ class FormQuestion {
     }
   }
 
-  // 🟡 Rename “Row Name” header
   updateRowHeaderLabel(newLabel) {
     if (this.type === 'table') {
       this.config.rowHeaderLabel = newLabel;
+    }
+  }
+
+  // 🟣 Footer-specific updaters
+  updateFooterField(key, value) {
+    if (this.type !== 'footer') return;
+    if (key in this.config) {
+      this.config[key] = value;
     }
   }
 
@@ -147,12 +167,21 @@ class FormQuestion {
             { key: `col_${uuid().slice(0, 6)}`, label: 'Question', editable: true },
             { key: `col_${uuid().slice(0, 6)}`, label: 'Answer', editable: true },
           ],
-
         rows: Array.isArray(data.config?.rows)
           ? [...data.config.rows]
           : [{ label: 'Row 1' }],
-
         rowHeaderLabel: data.config?.rowHeaderLabel || 'Row Name',
+      };
+    } else if (data.type === 'footer') {
+      instance.config = {
+        preparedByLabel: data.config?.preparedByLabel || 'Prepared by',
+        submittedByLabel: data.config?.submittedByLabel || 'Submitted by',
+        preparedByRole: data.config?.preparedByRole || 'Barangay Secretary',
+        submittedByRole: data.config?.submittedByRole || 'Punong Barangay',
+        showDate: data.config?.showDate ?? true,
+        noteText:
+          data.config?.noteText ||
+          'Note: This form is generated and submitted through the Report Management System.',
       };
     } else {
       instance.config = data.config || {};
