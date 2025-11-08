@@ -11,11 +11,12 @@ import {
   Skeleton,
   Pagination,
   Divider,
+  Tooltip,
 } from '@mui/material';
 
 import AccountsControlPanel from '@/services/AccountsControlPanel';
 import useRejectedAccounts from '@/services/useRejectedAccounts';
-import { getBarangays } from '@/services/BarangayService'; // 👈 make sure this path is correct
+import { getBarangays } from '@/services/BarangayService';
 
 const PAGE_LIMIT = 8;
 
@@ -33,23 +34,21 @@ const RejectedAccountsTab = () => {
   const { data = {}, loading } = useRejectedAccounts(token, page, PAGE_LIMIT);
   const [barangays, setBarangays] = useState([]);
 
-  // 🧠 Fetch barangays when component mounts
+  // Fetch barangays once
   useEffect(() => {
     const fetchBarangays = async () => {
       try {
         const result = await getBarangays(token);
         setBarangays(result || []);
       } catch (err) {
-        // console.error('Barangay fetch failed 💀', err);
+        // no need to console.error every time
       }
     };
-
     fetchBarangays();
   }, [token]);
 
-  const getBarangayName = (id) => {
-    return barangays.find((b) => b.id === id)?.name || 'Unknown';
-  };
+  const getBarangayName = (id) =>
+    barangays.find((b) => b.id === id)?.name || 'Unknown';
 
   const filteredSortedAccounts = useMemo(() => {
     let allAccounts = data.data || [];
@@ -106,7 +105,7 @@ const RejectedAccountsTab = () => {
           size="small"
           stickyHeader
           sx={{
-            minWidth: 1100,
+            minWidth: 1200,
             borderRadius: '0.5rem',
             '& thead': {
               backgroundColor: '#f5f7fa',
@@ -127,14 +126,16 @@ const RejectedAccountsTab = () => {
               <TableCell><strong>Phone</strong></TableCell>
               <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
+              <TableCell><strong>Remarks</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
             </TableRow>
           </TableHead>
+
           <TableBody>
             {loading ? (
               Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array(7).fill().map((_, j) => (
+                  {Array(8).fill().map((_, j) => (
                     <TableCell key={j} sx={{ py: 0.5 }}>
                       <Skeleton variant="text" height={20} sx={{ borderRadius: '0.5rem' }} />
                     </TableCell>
@@ -143,7 +144,7 @@ const RejectedAccountsTab = () => {
               ))
             ) : filteredSortedAccounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
                     No rejected accounts found.
                   </Typography>
@@ -159,6 +160,21 @@ const RejectedAccountsTab = () => {
                   <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {new Date(acc.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell sx={{ maxWidth: 200 }}>
+                    <Tooltip title={acc.remarks || 'No remarks provided'}>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {acc.remarks || '—'}
+                      </Typography>
+                    </Tooltip>
                   </TableCell>
                   <TableCell>
                     <Chip
