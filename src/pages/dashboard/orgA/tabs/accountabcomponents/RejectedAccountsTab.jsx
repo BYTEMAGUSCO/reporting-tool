@@ -190,7 +190,7 @@ const RejectedAccountsTab = () => {
                 whiteSpace: 'nowrap',
               }}
             >
-              {acc.denied_by || '—'}
+              {acc.denied_by_email || '—'}
             </Typography>
           </Tooltip>
         </TableCell>
