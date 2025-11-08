@@ -57,8 +57,8 @@ const useReports = (userRole, userBarangay, page, activeTab) => {
         const reportsWithDetails = tabFilteredReports.map((r) => ({
           ...r,
           remarks: r.remarks ?? null,
-          approved_by: r.report_status === 'A' ? r.approved_by ?? null : null,
-          denied_by: r.report_status === 'D' ? r.denied_by ?? null : null,
+          approved_by: r.report_status === 'A' ? r.reviewed_by ?? null : null,
+          denied_by: r.report_status === 'D' ? r.reviewed_by ?? null : null,
         }));
 
         setReports(reportsWithDetails);
