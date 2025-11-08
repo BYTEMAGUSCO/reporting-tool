@@ -16,6 +16,8 @@ import {
   Tabs,
   Tab,
   Skeleton,
+  Card,
+  CardContent,
 } from '@mui/material';
 
 import ReportIcon from '@mui/icons-material/Report';
@@ -50,6 +52,7 @@ const ViewReportsTabFilteredByBarangay = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [userBarangay, setUserBarangay] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0 });
 
   // Tabs: 0=approved, 1=pending, 2=rejected
   const [activeTab, setActiveTab] = useState(0);
@@ -66,35 +69,37 @@ const ViewReportsTabFilteredByBarangay = () => {
     setError(null);
     try {
       const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?page=${pageNumber}&limit=10`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?page=${pageNumber}&limit=10`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         throw new Error(errJson.error || 'Failed to load reports');
       }
       const json = await res.json();
-      console.log('🔥 Full reports API response:', json);
-
       let filteredReports = json.data || [];
 
       if (userRole === 'S') {
         filteredReports = json.data || [];
       } else if (userBarangay) {
-        filteredReports = json.data.filter(report => report.barangay === userBarangay);
+        filteredReports = json.data.filter((r) => r.barangay === userBarangay);
       }
 
+      // Count stats
+      const approvedCount = filteredReports.filter((r) => r.report_status === 'A').length;
+      const pendingCount = filteredReports.filter((r) => r.report_status === 'P').length;
+      const rejectedCount = filteredReports.filter((r) => r.report_status === 'D').length;
+      setStats({ approved: approvedCount, pending: pendingCount, rejected: rejectedCount });
+
       // Filter by tab:
-      // 0 = approved => report_status === "A"
-      // 1 = pending => report_status === "P"
-      // 2 = rejected => report_status === "D"
-      const tabFilteredReports = filteredReports.filter((r) => {
+      const tabFiltered = filteredReports.filter((r) => {
         if (activeTab === 0) return r.report_status === 'A';
         if (activeTab === 1) return r.report_status === 'P';
         return r.report_status === 'D';
       });
 
-      setReports(tabFilteredReports);
+      setReports(tabFiltered);
       setTotalPages(json.pagination?.totalPages || 1);
     } catch (err) {
       setError(err.message || 'Unknown error');
@@ -107,14 +112,107 @@ const ViewReportsTabFilteredByBarangay = () => {
     if (userRole) fetchReports(page);
   }, [userRole, userBarangay, page, activeTab]);
 
+  // Simple animated counter hook
+  const AnimatedCounter = ({ target, color }) => {
+    const [count, setCount] = useState(0);
+    useEffect(() => {
+      let start = 0;
+      const duration = 500;
+      const step = Math.ceil(target / 20);
+      const timer = setInterval(() => {
+        start += step;
+        if (start >= target) {
+          setCount(target);
+          clearInterval(timer);
+        } else {
+          setCount(start);
+        }
+      }, duration / 20);
+      return () => clearInterval(timer);
+    }, [target]);
+    return (
+      <Typography
+        variant="h4"
+        fontWeight="bold"
+        color={color}
+        sx={{ fontSize: '2rem', transition: '0.3s ease' }}
+      >
+        {count}
+      </Typography>
+    );
+  };
+
   return (
     <Box sx={{ px: 2, py: 2 }}>
       <Paper elevation={2} sx={{ borderRadius: 2, p: 3, mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={1} mb={1}>
+        <Stack direction="row" alignItems="center" spacing={1} mb={2}>
           <ReportIcon fontSize="medium" sx={{ color: 'black' }} />
           <Typography variant="h5" fontWeight="bold">
             Submitted Reports {userRole !== 'S' ? 'in Your Barangay' : ''}
           </Typography>
+        </Stack>
+
+        {/* 🔥 Status Counters Section */}
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          justifyContent="space-between"
+          alignItems="center"
+          mb={3}
+        >
+          <Card
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+              color: 'white',
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center' }}>
+              <DoneAllIcon sx={{ fontSize: 40, mb: 1 }} />
+              <AnimatedCounter target={stats.approved} color="white" />
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Approved Reports
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+              background: 'linear-gradient(135deg, #facc15, #eab308)',
+              color: 'black',
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center' }}>
+              <HourglassEmptyIcon sx={{ fontSize: 40, mb: 1 }} />
+              <AnimatedCounter target={stats.pending} color="black" />
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Pending Reports
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+              color: 'white',
+            }}
+          >
+            <CardContent sx={{ textAlign: 'center' }}>
+              <BlockIcon sx={{ fontSize: 40, mb: 1 }} />
+              <AnimatedCounter target={stats.rejected} color="white" />
+              <Typography variant="body1" sx={{ opacity: 0.9 }}>
+                Rejected Reports
+              </Typography>
+            </CardContent>
+          </Card>
         </Stack>
 
         <Divider sx={{ mb: 2 }} />
@@ -127,35 +225,16 @@ const ViewReportsTabFilteredByBarangay = () => {
           textColor="primary"
           variant="fullWidth"
           sx={{ mb: 2 }}
-          aria-label="reports filter tabs"
         >
-          <Tab
-            icon={<DoneAllIcon />}
-            iconPosition="start"
-            label="Approved"
-            id="tab-approved"
-            aria-controls="tabpanel-approved"
-          />
-          <Tab
-            icon={<HourglassEmptyIcon />}
-            iconPosition="start"
-            label="Pending"
-            id="tab-pending"
-            aria-controls="tabpanel-pending"
-          />
-          <Tab
-            icon={<BlockIcon />}
-            iconPosition="start"
-            label="Rejected"
-            id="tab-rejected"
-            aria-controls="tabpanel-rejected"
-          />
+          <Tab icon={<DoneAllIcon />} iconPosition="start" label="Approved" />
+          <Tab icon={<HourglassEmptyIcon />} iconPosition="start" label="Pending" />
+          <Tab icon={<BlockIcon />} iconPosition="start" label="Rejected" />
         </Tabs>
 
         {/* Table */}
         {loading ? (
           <TableContainer>
-            <Table size="small" aria-label="loading reports skeleton">
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <StyledTableCell>Report Name</StyledTableCell>
@@ -190,7 +269,7 @@ const ViewReportsTabFilteredByBarangay = () => {
           </Typography>
         ) : (
           <TableContainer>
-            <Table size="small" aria-label="submitted reports table">
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <StyledTableCell>Report Name</StyledTableCell>
@@ -205,7 +284,6 @@ const ViewReportsTabFilteredByBarangay = () => {
                     <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
                     <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
 
-                    {/* Show remarks only for rejected reports */}
                     {activeTab === 2 && (
                       <TableCell
                         sx={{
@@ -232,13 +310,9 @@ const ViewReportsTabFilteredByBarangay = () => {
                             fontWeight: 'bold',
                             borderRadius: '0.5rem',
                             backgroundColor: '#facc15',
-                            boxShadow: '0 3px 6px rgba(128, 128, 128, 0.4)',
                             color: 'black',
-                            px: 2,
-                            py: 1,
-                            '&:hover': {
-                              backgroundColor: '#fbbf24',
-                            },
+                            boxShadow: '0 3px 6px rgba(128,128,128,0.4)',
+                            '&:hover': { backgroundColor: '#fbbf24' },
                           }}
                         >
                           View PDF

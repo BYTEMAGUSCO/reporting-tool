@@ -1,4 +1,4 @@
-import { TableRow, TableCell, Button, Chip, Box } from "@mui/material";
+import { TableRow, TableCell, Button, Chip, Box, CircularProgress } from "@mui/material";
 
 const EventRow = ({
   event,
@@ -9,7 +9,7 @@ const EventRow = ({
   denyingId,
   loading,
   onClick,
-  userRole, // <-- pass this prop from parent
+  userRole,
 }) => {
   const shortDesc =
     event?.description?.length > 25
@@ -21,7 +21,7 @@ const EventRow = ({
 
   // Status chip colors
   let statusLabel = "Pending";
-  let statusColor = "warning"; // yellow
+  let statusColor = "warning";
   if (isApproved) {
     statusLabel = "Approved";
     statusColor = "success";
@@ -40,7 +40,11 @@ const EventRow = ({
             label={statusLabel}
             color={statusColor}
             size="small"
-            sx={{ fontSize: "0.7rem", height: "22px" }}
+            sx={{
+              fontSize: "0.7rem",
+              height: "22px",
+              borderRadius: "0.5rem",
+            }}
           />
         </Box>
       </TableCell>
@@ -60,9 +64,10 @@ const EventRow = ({
       </TableCell>
 
       <TableCell align="right">
-        {/* Only show buttons if user is "S" and event is not approved */}
+        {/* Only show buttons if user is Super Admin and event is not approved */}
         {userRole?.trim().toUpperCase() === "S" && !isApproved && (
-          <>
+          <Box display="flex" justifyContent="flex-end" gap={1}>
+            {/* ✅ APPROVE BUTTON */}
             <Button
               variant="contained"
               size="small"
@@ -72,15 +77,32 @@ const EventRow = ({
               }}
               disabled={loading || approvingId === event.id}
               sx={{
-                mr: 1,
-                backgroundColor: "#4caf50 !important", // green
+                backgroundColor: "#22c55e !important",
                 color: "#fff !important",
-                "&:hover": { backgroundColor: "#43a047 !important" },
+                fontWeight: "600 !important",
+                borderRadius: "0.5rem !important",
+                textTransform: "none !important",
+                px: 1.8,
+                py: 0.6,
+                minWidth: "90px",
+                "&:hover": {
+                  backgroundColor: "#16a34a !important",
+                  transform: "scale(0.97)",
+                },
+                "&:disabled": {
+                  backgroundColor: "#86efac !important",
+                  color: "#f0fdf4 !important",
+                },
               }}
             >
-              {approvingId === event.id ? "Approving..." : "Approve"}
+              {approvingId === event.id ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                "Approve"
+              )}
             </Button>
 
+            {/* ❌ DENY BUTTON */}
             <Button
               variant="contained"
               size="small"
@@ -90,14 +112,31 @@ const EventRow = ({
               }}
               disabled={denyingId === event.id || loading}
               sx={{
-                backgroundColor: "#f44336 !important", // red
+                backgroundColor: "#ef4444 !important",
                 color: "#fff !important",
-                "&:hover": { backgroundColor: "#e53935 !important" },
+                fontWeight: "600 !important",
+                borderRadius: "0.5rem !important",
+                textTransform: "none !important",
+                px: 1.8,
+                py: 0.6,
+                minWidth: "90px",
+                "&:hover": {
+                  backgroundColor: "#dc2626 !important",
+                  transform: "scale(0.97)",
+                },
+                "&:disabled": {
+                  backgroundColor: "#fecaca !important",
+                  color: "#fee2e2 !important",
+                },
               }}
             >
-              {denyingId === event.id ? "Denying..." : "Deny"}
+              {denyingId === event.id ? (
+                <CircularProgress size={16} color="inherit" />
+              ) : (
+                "Deny"
+              )}
             </Button>
-          </>
+          </Box>
         )}
       </TableCell>
     </TableRow>

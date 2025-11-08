@@ -37,8 +37,6 @@ const ReportsTable = ({
   rejectingReportId,
   onApprove,
   onReject,
-  loginBtnStyles,
-  btnOutlinedStyles,
   activeTab, // 0 = Pending, 1 = Approved, 2 = Denied
   loading,
 }) => {
@@ -52,7 +50,7 @@ const ReportsTable = ({
     (report) => report.report_status === statusMap[activeTab]
   );
 
-  // Show 5 skeleton rows while loading
+  // Show skeletons while loading
   if (loading) {
     return (
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
@@ -74,12 +72,7 @@ const ReportsTable = ({
                   <TableCell><Skeleton variant="text" width={180} /></TableCell>
                 )}
                 <TableCell align="right">
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    justifyContent="flex-end"
-                    flexWrap="nowrap"
-                  >
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Skeleton variant="rectangular" width={80} height={32} />
                     <Skeleton variant="rectangular" width={80} height={32} />
                     <Skeleton variant="rectangular" width={60} height={32} />
@@ -123,7 +116,6 @@ const ReportsTable = ({
                   {new Date(report.created_at).toLocaleString()}
                 </TableCell>
 
-                {/* Show remarks column only for denied reports */}
                 {activeTab === 2 && (
                   <TableCell
                     sx={{
@@ -139,14 +131,10 @@ const ReportsTable = ({
                 )}
 
                 <TableCell align="right">
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    justifyContent="flex-end"
-                    flexWrap="nowrap"
-                  >
+                  <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="nowrap">
                     {activeTab === 0 && (
                       <>
+                        {/* 🟩 APPROVE */}
                         <Button
                           variant="contained"
                           size="small"
@@ -159,11 +147,21 @@ const ReportsTable = ({
                           }
                           onClick={() => onApprove(report.report_id)}
                           sx={{
-                            ...loginBtnStyles,
-                            minWidth: 90,
-                            px: 1.5,
-                            borderRadius: 2,
-                            textTransform: 'none',
+                            backgroundColor: '#22c55e !important',
+                            color: '#fff !important',
+                            fontWeight: '600 !important',
+                            borderRadius: '0.5rem !important',
+                            textTransform: 'none !important',
+                            px: 1.8,
+                            py: 0.6,
+                            '&:hover': {
+                              backgroundColor: '#16a34a !important',
+                              transform: 'scale(0.97)',
+                            },
+                            '&:disabled': {
+                              backgroundColor: '#86efac !important',
+                              color: '#f0fdf4 !important',
+                            },
                           }}
                           disabled={approvingReportId === report.report_id}
                         >
@@ -171,8 +169,10 @@ const ReportsTable = ({
                             ? 'Approving...'
                             : 'Approve'}
                         </Button>
+
+                        {/* 🟥 REJECT */}
                         <Button
-                          variant="outlined"
+                          variant="contained"
                           size="small"
                           startIcon={
                             rejectingReportId === report.report_id ? (
@@ -183,29 +183,49 @@ const ReportsTable = ({
                           }
                           onClick={() => onReject(report.report_id)}
                           sx={{
-                            ...btnOutlinedStyles,
-                            minWidth: 80,
-                            px: 1.5,
-                            borderRadius: 2,
-                            textTransform: 'none',
+                            backgroundColor: '#ef4444 !important',
+                            color: '#fff !important',
+                            fontWeight: '600 !important',
+                            borderRadius: '0.5rem !important',
+                            textTransform: 'none !important',
+                            px: 1.8,
+                            py: 0.6,
+                            '&:hover': {
+                              backgroundColor: '#dc2626 !important',
+                              transform: 'scale(0.97)',
+                            },
+                            '&:disabled': {
+                              backgroundColor: '#fecaca !important',
+                              color: '#fee2e2 !important',
+                            },
                           }}
                           disabled={rejectingReportId === report.report_id}
                         >
-                          Reject
+                          {rejectingReportId === report.report_id
+                            ? 'Rejecting...'
+                            : 'Reject'}
                         </Button>
                       </>
                     )}
+
+                    {/* 📄 PDF BUTTON */}
                     <Button
                       variant="contained"
                       size="small"
                       startIcon={<PictureAsPdfOutlinedIcon />}
                       onClick={() => window.open(report.fileUrl, '_blank')}
                       sx={{
-                        ...loginBtnStyles,
-                        minWidth: 80,
-                        px: 1.5,
-                        borderRadius: 2,
-                        textTransform: 'none',
+                        backgroundColor: '#2563eb !important',
+                        color: '#fff !important',
+                        fontWeight: '600 !important',
+                        borderRadius: '0.5rem !important',
+                        textTransform: 'none !important',
+                        px: 1.8,
+                        py: 0.6,
+                        '&:hover': {
+                          backgroundColor: '#1d4ed8 !important',
+                          transform: 'scale(0.97)',
+                        },
                       }}
                     >
                       PDF

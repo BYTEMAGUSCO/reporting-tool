@@ -124,6 +124,13 @@ const DashboardOrgA = () => {
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
 
   const roleTheme = getRoleTheme(userRole);
+  const roleLabels = {
+    S: 'Super Admin',
+    D: 'DILG',
+    B: 'Barangay',
+  };
+  const userRoleLabel = roleLabels[userRole] || 'User';
+
 
   const fetchNotifications = async () => {
     if (!token) return;
@@ -235,9 +242,32 @@ const DashboardOrgA = () => {
             },
           }}
         >
-          <Box sx={{ px: 2, py: 1 }}>
-            <GovLogoOnly logoWidth={250} logoHeight={85} />
-          </Box>
+          <Box
+  sx={{
+    px: 2,
+    py: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    textAlign: 'center',
+  }}
+>
+  <GovLogoOnly logoWidth={250} logoHeight={85} />
+  <Typography
+    variant="subtitle2"
+    sx={{
+      mt: 1,
+      fontWeight: 600,
+      fontSize: '0.9rem',
+      color: roleTheme.palette.text.primary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    }}
+  >
+    {userRoleLabel}
+  </Typography>
+</Box>
+
 
           <List sx={{ flexGrow: 1 }}>
             {tabs.map((tab, index) => (

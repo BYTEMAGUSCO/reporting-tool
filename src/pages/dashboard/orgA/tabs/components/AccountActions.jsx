@@ -80,7 +80,6 @@ const AccountActions = ({ account, onActionComplete }) => {
     }
   };
 
-  // Open dialog before actual denial
   const handleDenyClick = async () => {
     const confirmed = await showConfirmAlert(`Reject ${account.requester_name}?`);
     if (confirmed) {
@@ -142,38 +141,64 @@ const AccountActions = ({ account, onActionComplete }) => {
   return (
     <>
       <Box display="flex" gap={1} justifyContent="flex-end">
+        {/* ✅ APPROVE BUTTON */}
         <Button
-          variant="outlined"
-          color="success"
+          variant="contained"
           size="small"
           onClick={handleApprove}
           disabled={approving || denying}
           sx={{
-            textTransform: 'none',
-            fontSize: '0.75rem',
-            px: 1.5,
-            py: 0.5,
-            borderRadius: '0.5rem',
+            backgroundColor: '#22c55e !important', // green
+            borderColor: '#16a34a !important',
+            color: '#fff !important',
+            textTransform: 'none !important',
+            fontSize: '0.8rem !important',
+            px: 1.8,
+            py: 0.7,
+            fontWeight: '600 !important',
+            borderRadius: '0.5rem !important',
             borderWidth: 2,
+            '&:hover': {
+              backgroundColor: '#16a34a !important',
+              borderColor: '#15803d !important',
+              transform: 'scale(0.97)',
+            },
+            '&:disabled': {
+              backgroundColor: '#86efac !important',
+              color: '#f0fdf4 !important',
+            },
           }}
           startIcon={!approving && <CheckCircleIcon fontSize="small" />}
         >
           {approving ? <CircularProgress size={16} color="inherit" /> : 'Approve'}
         </Button>
 
+        {/* ❌ REJECT BUTTON */}
         <Button
-          variant="outlined"
-          color="error"
+          variant="contained"
           size="small"
           onClick={handleDenyClick}
           disabled={denying || approving}
           sx={{
-            textTransform: 'none',
-            fontSize: '0.75rem',
-            px: 1.5,
-            py: 0.5,
-            borderRadius: '0.5rem',
+            backgroundColor: '#ef4444 !important', // red
+            borderColor: '#b91c1c !important',
+            color: '#fff !important',
+            textTransform: 'none !important',
+            fontSize: '0.8rem !important',
+            px: 1.8,
+            py: 0.7,
+            fontWeight: '600 !important',
+            borderRadius: '0.5rem !important',
             borderWidth: 2,
+            '&:hover': {
+              backgroundColor: '#dc2626 !important',
+              borderColor: '#991b1b !important',
+              transform: 'scale(0.97)',
+            },
+            '&:disabled': {
+              backgroundColor: '#fecaca !important',
+              color: '#fee2e2 !important',
+            },
           }}
           startIcon={!denying && <CancelIcon fontSize="small" />}
         >
@@ -199,10 +224,20 @@ const AccountActions = ({ account, onActionComplete }) => {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleDialogClose} color="inherit">
+          <Button onClick={handleDialogClose} sx={{ color: '#64748b !important' }}>
             Cancel
           </Button>
-          <Button onClick={handleConfirmDeny} color="error" variant="contained">
+          <Button
+            onClick={handleConfirmDeny}
+            sx={{
+              backgroundColor: '#ef4444 !important',
+              color: '#fff !important',
+              '&:hover': {
+                backgroundColor: '#dc2626 !important',
+              },
+            }}
+            variant="contained"
+          >
             Submit
           </Button>
         </DialogActions>
