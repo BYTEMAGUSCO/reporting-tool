@@ -50,7 +50,6 @@ const ReportsTable = ({
     (report) => report.report_status === statusMap[activeTab]
   );
 
-  // Show skeletons while loading
   if (loading) {
     return (
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
@@ -59,6 +58,11 @@ const ReportsTable = ({
             <TableRow>
               <StyledTableCell>Report Name</StyledTableCell>
               <StyledTableCell>Submitted On</StyledTableCell>
+              {(activeTab === 1 || activeTab === 2) && (
+                <StyledTableCell>
+                  {activeTab === 1 ? 'Approved By' : 'Denied By'}
+                </StyledTableCell>
+              )}
               {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
               <StyledTableCell align="right">Actions</StyledTableCell>
             </TableRow>
@@ -68,6 +72,9 @@ const ReportsTable = ({
               <TableRow key={i}>
                 <TableCell><Skeleton variant="text" width={150} /></TableCell>
                 <TableCell><Skeleton variant="text" width={120} /></TableCell>
+                {(activeTab === 1 || activeTab === 2) && (
+                  <TableCell><Skeleton variant="text" width={180} /></TableCell>
+                )}
                 {activeTab === 2 && (
                   <TableCell><Skeleton variant="text" width={180} /></TableCell>
                 )}
@@ -93,15 +100,27 @@ const ReportsTable = ({
           <TableRow>
             <StyledTableCell>Report Name</StyledTableCell>
             <StyledTableCell>Submitted On</StyledTableCell>
+            {(activeTab === 1 || activeTab === 2) && (
+              <StyledTableCell>
+                {activeTab === 1 ? 'Approved By' : 'Denied By'}
+              </StyledTableCell>
+            )}
             {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
             <StyledTableCell align="right">Actions</StyledTableCell>
           </TableRow>
         </TableHead>
+
         <TableBody>
           {filteredReports.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={activeTab === 2 ? 4 : 3}
+                colSpan={
+                  activeTab === 2
+                    ? 5
+                    : activeTab === 1
+                    ? 4
+                    : 3
+                }
                 align="center"
                 sx={{ py: 3, fontStyle: 'italic' }}
               >
@@ -115,6 +134,22 @@ const ReportsTable = ({
                 <TableCell>
                   {new Date(report.created_at).toLocaleString()}
                 </TableCell>
+
+                {(activeTab === 1 || activeTab === 2) && (
+                  <TableCell
+                    sx={{
+                      whiteSpace: 'normal',
+                      maxWidth: 300,
+                      wordBreak: 'break-word',
+                      color: report.approved_by || report.denied_by ? 'inherit' : 'gray',
+                      fontStyle: report.approved_by || report.denied_by ? 'normal' : 'italic',
+                    }}
+                  >
+                    {activeTab === 1
+                      ? report.approved_by || 'No approver email'
+                      : report.denied_by || 'No denier email'}
+                  </TableCell>
+                )}
 
                 {activeTab === 2 && (
                   <TableCell
@@ -131,10 +166,15 @@ const ReportsTable = ({
                 )}
 
                 <TableCell align="right">
-                  <Stack direction="row" spacing={1} justifyContent="flex-end" flexWrap="nowrap">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    justifyContent="flex-end"
+                    flexWrap="nowrap"
+                  >
                     {activeTab === 0 && (
                       <>
-                        {/* 🟩 APPROVE */}
+                        {/* APPROVE */}
                         <Button
                           variant="contained"
                           size="small"
@@ -170,7 +210,7 @@ const ReportsTable = ({
                             : 'Approve'}
                         </Button>
 
-                        {/* 🟥 REJECT */}
+                        {/* REJECT */}
                         <Button
                           variant="contained"
                           size="small"
@@ -208,7 +248,7 @@ const ReportsTable = ({
                       </>
                     )}
 
-                    {/* 📄 PDF BUTTON */}
+                    {/* PDF BUTTON */}
                     <Button
                       variant="contained"
                       size="small"

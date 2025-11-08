@@ -48,19 +48,20 @@ const useReports = (userRole, userBarangay, page, activeTab) => {
           );
         }
 
-        // Filter by active tab status properly
         const tabStatus = statusMap[activeTab];
         const tabFilteredReports = filteredReports.filter(
           (r) => r.report_status === tabStatus
         );
 
-        // Include remarks if present (especially for denied reports)
-        const reportsWithRemarks = tabFilteredReports.map((r) => ({
+        // Explicitly include remarks, approved_by, and denied_by email if present
+        const reportsWithDetails = tabFilteredReports.map((r) => ({
           ...r,
-          remarks: r.remarks ?? null, // explicitly include remarks even if null
+          remarks: r.remarks ?? null,
+          approved_by: r.report_status === 'A' ? r.approved_by ?? null : null,
+          denied_by: r.report_status === 'D' ? r.denied_by ?? null : null,
         }));
 
-        setReports(reportsWithRemarks);
+        setReports(reportsWithDetails);
         setTotalPages(json.pagination?.totalPages || 1);
       } catch (err) {
         setError(err.message || 'Unknown error');
