@@ -29,7 +29,7 @@ const ApprovedAccountsTab = () => {
   const role = session?.user?.user_metadata?.role;
   const [page, setPage] = useState(1);
   const [barangays, setBarangays] = useState([]);
-  const [deactivating, setDeactivating] = useState(null); // track email being deactivated
+  const [deactivating, setDeactivating] = useState(null);
 
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -52,7 +52,7 @@ const ApprovedAccountsTab = () => {
         const result = await getBarangays(token);
         setBarangays(result);
       } catch (err) {
-        // console.error('Failed to load barangays', err);
+        console.error('Failed to load barangays', err);
       }
     };
 
@@ -149,7 +149,7 @@ const ApprovedAccountsTab = () => {
           borderRadius: '0.5rem',
         }}
       >
-        <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
+        <Table size="small" stickyHeader sx={{ minWidth: 1100 }}>
           <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
             <TableRow>
               <TableCell><strong>Name</strong></TableCell>
@@ -158,6 +158,7 @@ const ApprovedAccountsTab = () => {
               <TableCell><strong>Phone</strong></TableCell>
               <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
+              <TableCell><strong>Approved By</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
               {role === "S" && (
                 <TableCell><strong>Actions</strong></TableCell>
@@ -168,7 +169,7 @@ const ApprovedAccountsTab = () => {
             {loading ? (
               Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array(role === "S" ? 8 : 7).fill().map((_, j) => (
+                  {Array(role === "S" ? 9 : 8).fill().map((_, j) => (
                     <TableCell key={j} sx={{ py: 0.5 }}>
                       <Skeleton variant="text" height={20} />
                     </TableCell>
@@ -177,7 +178,7 @@ const ApprovedAccountsTab = () => {
               ))
             ) : filteredSortedAccounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={role === "S" ? 8 : 7}>
+                <TableCell colSpan={role === "S" ? 9 : 8}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
                     No approved accounts found.
                   </Typography>
@@ -194,6 +195,7 @@ const ApprovedAccountsTab = () => {
                   <TableCell sx={{ whiteSpace: 'nowrap' }}>
                     {new Date(acc.created_at).toLocaleDateString()}
                   </TableCell>
+                  <TableCell>{acc.approved_by_email || '—'}</TableCell>
                   <TableCell>
                     <Chip
                       label="Approved"
