@@ -180,7 +180,7 @@ const RejectedAccountsTab = () => {
 
         {/* NEW: Denied By column */}
         <TableCell sx={{ maxWidth: 180 }}>
-          <Tooltip title={acc.denied_by || 'Unknown'}>
+          <Tooltip title={acc.denied_by_email || 'Unknown'}>
             <Typography
               variant="body2"
               noWrap
