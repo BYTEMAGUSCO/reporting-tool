@@ -275,7 +275,7 @@ const ViewReportsTabFilteredByBarangay = () => {
         <StyledTableCell>Report Name</StyledTableCell>
         <StyledTableCell>Submitted On</StyledTableCell>
         {(activeTab === 0 || activeTab === 1 || activeTab === 2) && (
-          <StyledTableCell>{activeTab === 0 ? '' : activeTab === 1 ? 'Approved By' : 'Denied By'}</StyledTableCell>
+          <StyledTableCell>{activeTab === 0 ? 'Approved By' : activeTab === 2 ? 'Denied By' : ''}</StyledTableCell>
         )}
         {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
         <StyledTableCell align="right">Actions</StyledTableCell>
@@ -287,17 +287,17 @@ const ViewReportsTabFilteredByBarangay = () => {
           <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
           <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
 
-          {(activeTab === 1 || activeTab === 2) && (
+          {(activeTab === 0 || activeTab === 2) && (
             <TableCell
               sx={{
                 whiteSpace: 'normal',
                 maxWidth: 300,
                 wordBreak: 'break-word',
-                fontStyle: report.approved_by || report.denied_by ? 'normal' : 'italic',
-                color: report.approved_by || report.denied_by ? 'inherit' : 'gray',
+                fontStyle: report.reviewed_by ? 'normal' : 'italic',
+                color: report.reviewed_by ? 'inherit' : 'gray',
               }}
             >
-              {report.approved_by || report.denied_by || 'N/A'}
+              {report.reviewed_by || 'N/A'}
             </TableCell>
           )}
 
