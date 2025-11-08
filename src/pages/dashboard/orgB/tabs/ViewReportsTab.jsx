@@ -269,61 +269,79 @@ const ViewReportsTabFilteredByBarangay = () => {
           </Typography>
         ) : (
           <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell>Report Name</StyledTableCell>
-                  <StyledTableCell>Submitted On</StyledTableCell>
-                  {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-                  <StyledTableCell align="right">Actions</StyledTableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {reports.map((report) => (
-                  <TableRow key={report.report_id}>
-                    <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
-                    <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
+  <Table size="small">
+    <TableHead>
+      <TableRow>
+        <StyledTableCell>Report Name</StyledTableCell>
+        <StyledTableCell>Submitted On</StyledTableCell>
+        {(activeTab === 0 || activeTab === 1 || activeTab === 2) && (
+          <StyledTableCell>{activeTab === 0 ? '' : activeTab === 1 ? 'Approved By' : 'Denied By'}</StyledTableCell>
+        )}
+        {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
+        <StyledTableCell align="right">Actions</StyledTableCell>
+      </TableRow>
+    </TableHead>
+    <TableBody>
+      {reports.map((report) => (
+        <TableRow key={report.report_id}>
+          <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
+          <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
 
-                    {activeTab === 2 && (
-                      <TableCell
-                        sx={{
-                          whiteSpace: 'normal',
-                          maxWidth: 300,
-                          wordBreak: 'break-word',
-                          fontStyle: report.remarks ? 'normal' : 'italic',
-                          color: report.remarks ? 'inherit' : 'gray',
-                        }}
-                      >
-                        {report.remarks || 'No remarks provided'}
-                      </TableCell>
-                    )}
+          {(activeTab === 1 || activeTab === 2) && (
+            <TableCell
+              sx={{
+                whiteSpace: 'normal',
+                maxWidth: 300,
+                wordBreak: 'break-word',
+                fontStyle: report.approved_by || report.denied_by ? 'normal' : 'italic',
+                color: report.approved_by || report.denied_by ? 'inherit' : 'gray',
+              }}
+            >
+              {report.approved_by || report.denied_by || 'N/A'}
+            </TableCell>
+          )}
 
-                    <TableCell align="right">
-                      <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        <Button
-                          variant="contained"
-                          size="small"
-                          startIcon={<PictureAsPdfOutlinedIcon />}
-                          onClick={() => window.open(report.fileUrl, '_blank')}
-                          sx={{
-                            textTransform: 'none',
-                            fontWeight: 'bold',
-                            borderRadius: '0.5rem',
-                            backgroundColor: '#facc15',
-                            color: 'black',
-                            boxShadow: '0 3px 6px rgba(128,128,128,0.4)',
-                            '&:hover': { backgroundColor: '#fbbf24' },
-                          }}
-                        >
-                          View PDF
-                        </Button>
-                      </Stack>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {activeTab === 2 && (
+            <TableCell
+              sx={{
+                whiteSpace: 'normal',
+                maxWidth: 300,
+                wordBreak: 'break-word',
+                fontStyle: report.remarks ? 'normal' : 'italic',
+                color: report.remarks ? 'inherit' : 'gray',
+              }}
+            >
+              {report.remarks || 'No remarks provided'}
+            </TableCell>
+          )}
+
+          <TableCell align="right">
+            <Stack direction="row" spacing={1} justifyContent="flex-end">
+              <Button
+                variant="contained"
+                size="small"
+                startIcon={<PictureAsPdfOutlinedIcon />}
+                onClick={() => window.open(report.fileUrl, '_blank')}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 'bold',
+                  borderRadius: '0.5rem',
+                  backgroundColor: '#facc15',
+                  color: 'black',
+                  boxShadow: '0 3px 6px rgba(128,128,128,0.4)',
+                  '&:hover': { backgroundColor: '#fbbf24' },
+                }}
+              >
+                View PDF
+              </Button>
+            </Stack>
+          </TableCell>
+        </TableRow>
+      ))}
+    </TableBody>
+  </Table>
+</TableContainer>
+
         )}
 
         <Box mt={2} display="flex" justifyContent="center">
