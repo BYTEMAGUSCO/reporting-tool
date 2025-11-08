@@ -1,4 +1,4 @@
-const denyRequest = async (requesterEmail, requesterRole, token) => {
+const denyRequest = async (requesterEmail, requesterRole, token, remarks) => {
   try {
     const res = await fetch(
       'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/deny-registration-request',
@@ -11,6 +11,7 @@ const denyRequest = async (requesterEmail, requesterRole, token) => {
         body: JSON.stringify({
           requester_email: requesterEmail,
           requester_role: requesterRole,
+          remarks: remarks
         }),
       }
     );
