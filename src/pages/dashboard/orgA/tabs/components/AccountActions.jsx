@@ -4,6 +4,11 @@ import {
   IconButton,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
 } from '@mui/material';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -21,13 +26,13 @@ const AccountActions = ({ account, onActionComplete }) => {
   const [token, setToken] = useState(null);
   const [approving, setApproving] = useState(false);
   const [denying, setDenying] = useState(false);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [remarks, setRemarks] = useState('');
 
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
     if (session?.access_token) {
       setToken(session.access_token);
-    } else {
-      // console.warn('🛑 No session token found!');
     }
   }, []);
 
@@ -47,7 +52,7 @@ const AccountActions = ({ account, onActionComplete }) => {
       phone: account.requester_phone,
       name: account.requester_name,
       role: account.requester_role,
-      barangay: account.requester_barangay, // 🆕 NEW: include barangay
+      barangay: account.requester_barangay,
       token,
     };
 
@@ -58,7 +63,7 @@ const AccountActions = ({ account, onActionComplete }) => {
         payload.phone,
         payload.name,
         payload.role,
-        payload.barangay, // 🆕 pass barangay here
+        payload.barangay,
         payload.token
       );
 
@@ -69,16 +74,30 @@ const AccountActions = ({ account, onActionComplete }) => {
         throw new Error(result.error);
       }
     } catch (err) {
-      // console.error('❌ Approval failed:', err.message);
       showErrorAlert('Failed to approve request: ' + err.message);
     } finally {
       setApproving(false);
     }
   };
 
-  const handleDeny = async () => {
+  // Open dialog before actual denial
+  const handleDenyClick = async () => {
     const confirmed = await showConfirmAlert(`Reject ${account.requester_name}?`);
-    if (!confirmed) return;
+    if (confirmed) {
+      setOpenDialog(true);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setOpenDialog(false);
+    setRemarks('');
+  };
+
+  const handleConfirmDeny = async () => {
+    if (!remarks.trim()) {
+      showErrorAlert('Please provide remarks before rejecting.');
+      return;
+    }
 
     if (!token) {
       showErrorAlert('No valid token found! Please log in again.');
@@ -86,14 +105,17 @@ const AccountActions = ({ account, onActionComplete }) => {
     }
 
     setDenying(true);
+    setOpenDialog(false);
+
     const payload = {
       email: account.requester_email,
       role: account.requester_role,
+      remarks,
       token,
     };
 
     try {
-      const result = await denyRequest(payload.email, payload.role, payload.token);
+      const result = await denyRequest(payload.email, payload.role, payload.token, payload.remarks);
 
       if (result.success) {
         await showSuccessAlert(`${account.requester_name} has been rejected.`);
@@ -102,10 +124,10 @@ const AccountActions = ({ account, onActionComplete }) => {
         throw new Error(result.error);
       }
     } catch (err) {
-      // console.error('❌ Denial failed:', err.message);
       showErrorAlert('Failed to reject request: ' + err.message);
     } finally {
       setDenying(false);
+      setRemarks('');
     }
   };
 
@@ -118,45 +140,74 @@ const AccountActions = ({ account, onActionComplete }) => {
   }
 
   return (
-    <Box display="flex" gap={1} justifyContent="flex-end">
-      <Button
-        variant="outlined"
-        color="success"
-        size="small"
-        onClick={handleApprove}
-        disabled={approving || denying}
-        sx={{
-          textTransform: 'none',
-          fontSize: '0.75rem',
-          px: 1.5,
-          py: 0.5,
-          borderRadius: '0.5rem',
-          borderWidth: 2,
-        }}
-        startIcon={!approving && <CheckCircleIcon fontSize="small" />}
-      >
-        {approving ? <CircularProgress size={16} color="inherit" /> : 'Approve'}
-      </Button>
+    <>
+      <Box display="flex" gap={1} justifyContent="flex-end">
+        <Button
+          variant="outlined"
+          color="success"
+          size="small"
+          onClick={handleApprove}
+          disabled={approving || denying}
+          sx={{
+            textTransform: 'none',
+            fontSize: '0.75rem',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: '0.5rem',
+            borderWidth: 2,
+          }}
+          startIcon={!approving && <CheckCircleIcon fontSize="small" />}
+        >
+          {approving ? <CircularProgress size={16} color="inherit" /> : 'Approve'}
+        </Button>
 
-      <Button
-        variant="outlined"
-        color="error"
-        size="small"
-        onClick={handleDeny}
-        disabled={denying || approving}
-        sx={{
-          textTransform: 'none',
-          fontSize: '0.75rem',
-          px: 1.5,
-          py: 0.5,
-          borderRadius: '0.5rem',
-          borderWidth: 2,
-        }}
-        startIcon={!denying && <CancelIcon fontSize="small" />}
-      >
-        {denying ? <CircularProgress size={16} color="inherit" /> : 'Reject'}
-      </Button>
-    </Box>
+        <Button
+          variant="outlined"
+          color="error"
+          size="small"
+          onClick={handleDenyClick}
+          disabled={denying || approving}
+          sx={{
+            textTransform: 'none',
+            fontSize: '0.75rem',
+            px: 1.5,
+            py: 0.5,
+            borderRadius: '0.5rem',
+            borderWidth: 2,
+          }}
+          startIcon={!denying && <CancelIcon fontSize="small" />}
+        >
+          {denying ? <CircularProgress size={16} color="inherit" /> : 'Reject'}
+        </Button>
+      </Box>
+
+      {/* Remarks Dialog */}
+      <Dialog open={openDialog} onClose={handleDialogClose}>
+        <DialogTitle>Enter Remarks</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Remarks"
+            type="text"
+            fullWidth
+            multiline
+            minRows={3}
+            variant="outlined"
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleDialogClose} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleConfirmDeny} color="error" variant="contained">
+            Submit
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 };
 
