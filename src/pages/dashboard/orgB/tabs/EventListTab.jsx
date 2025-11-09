@@ -44,6 +44,7 @@ const EventsTab = () => {
   const [userRole, setUserRole] = useState(null);
   const [barangays, setBarangays] = useState({});
   const [attendance, setAttendance] = useState([]);
+  const [remarks, setRemarks] = useState('');
 
   // confirmation modal state
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -142,38 +143,39 @@ const EventsTab = () => {
   }, [token, userBarangay]);
 
   // 🔹 Create attendance record
-  const handleMarkAttendance = async (event_id, is_attending) => {
-    try {
-      const remarks = is_attending ? 'Will attend' : 'Cannot attend';
-      const res = await createAttendance({
-        event_id,
-        barangay_id: userBarangay,
-        is_attending,
-        remarks,
-      });
-      await showSuccessAlert(
-        is_attending ? 'Marked as attending ✅' : 'Marked as not attending ❌'
-      );
-      setAttendance((prev) => [...prev, ...(res.data || [])]);
-    } catch (err) {
-      console.error('[Attendance] Failed to submit:', err);
-      await showErrorAlert('Failed to submit attendance: ' + err.message);
-    }
-  };
+  const handleMarkAttendance = async (event_id, is_attending, remarksText = '') => {
+  try {
+    const res = await createAttendance({
+      event_id,
+      barangay_id: userBarangay,
+      is_attending,
+      remarks: remarksText || null, // optional
+    });
+    await showSuccessAlert(
+      is_attending ? 'Marked as attending ✅' : 'Marked as not attending ❌'
+    );
+    setAttendance((prev) => [...prev, ...(res.data || [])]);
+  } catch (err) {
+    console.error('[Attendance] Failed to submit:', err);
+    await showErrorAlert('Failed to submit attendance: ' + err.message);
+  }
+};
 
   // 🔹 Confirmation dialog trigger
   const confirmAttendance = (event_id, is_attending) => {
-    setConfirmAction({ event_id, is_attending });
-    setConfirmOpen(true);
-  };
+  setConfirmAction({ event_id, is_attending });
+  setRemarks('');
+  setConfirmOpen(true);
+};
 
   const confirmSubmit = async () => {
-    if (confirmAction) {
-      await handleMarkAttendance(confirmAction.event_id, confirmAction.is_attending);
-    }
-    setConfirmOpen(false);
-    setConfirmAction(null);
-  };
+  if (confirmAction) {
+    await handleMarkAttendance(confirmAction.event_id, confirmAction.is_attending, remarks);
+  }
+  setConfirmOpen(false);
+  setConfirmAction(null);
+  setRemarks('');
+};
 
   const getStatusChip = (status) => {
     if (status === 'A') return <Chip label="Approved" color="success" size="small" />;
@@ -253,7 +255,7 @@ const EventsTab = () => {
           </Typography>
         </Stack>
 
-        {/* 👇 Attendance section clearly inside the card, under date/time */}
+        {/* 👇 Attendance Section */}
         {!isPast && event.status === 'A' && (
           <Box
             mt={2}
@@ -261,22 +263,37 @@ const EventsTab = () => {
             borderRadius="0.5rem"
             bgcolor="rgba(240, 240, 240, 0.4)"
             display="flex"
-            flexDirection="row"
+            flexDirection="column"
             justifyContent="flex-start"
-            gap={1.5}
+            gap={1}
           >
             {existing ? (
-              <Chip
-                label={
-                  existing.is_attending ? 'You’re Attending ✅' : 'Not Attending ❌'
-                }
-                color={existing.is_attending ? 'success' : 'error'}
-                sx={{
-                  fontWeight: '600',
-                  borderRadius: '0.5rem',
-                  width: 'fit-content',
-                }}
-              />
+              <>
+                <Chip
+                  label={
+                    existing.is_attending
+                      ? 'You’re Attending ✅'
+                      : 'Not Attending ❌'
+                  }
+                  color={existing.is_attending ? 'success' : 'error'}
+                  sx={{
+                    fontWeight: '600',
+                    borderRadius: '0.5rem',
+                    width: 'fit-content',
+                  }}
+                />
+
+                {/* 🆕 Display Remarks if present */}
+                {existing.remarks && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5, ml: 0.5 }}
+                  >
+                    <strong>Remarks:</strong> {existing.remarks}
+                  </Typography>
+                )}
+              </>
             ) : (
               <>
                 <Button
@@ -329,6 +346,7 @@ const EventsTab = () => {
     </Card>
   );
 };
+
 
 
   const SectionHeader = ({ icon: Icon, title }) => (
@@ -415,27 +433,48 @@ const EventsTab = () => {
 
       {/* Confirmation Modal */}
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
-        <DialogTitle>Confirm Attendance</DialogTitle>
-        <DialogContent>
-          <Typography>
-            {confirmAction?.is_attending
-              ? 'Are you sure you want to mark yourself as attending this event?'
-              : 'Are you sure you will NOT attend this event?'}
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmSubmit}
-            color={confirmAction?.is_attending ? 'success' : 'error'}
-            variant="contained"
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
+  <DialogTitle>Confirm Attendance</DialogTitle>
+  <DialogContent>
+    <Typography sx={{ mb: 2 }}>
+      {confirmAction?.is_attending
+        ? 'Are you sure you want to mark yourself as attending this event?'
+        : 'Are you sure you will NOT attend this event?'}
+    </Typography>
+
+    {/* 🆕 Optional Remarks Input */}
+    <Typography variant="body2" sx={{ mb: 1 }}>
+      Add remarks (optional):
+    </Typography>
+    <Box
+      component="textarea"
+      rows={3}
+      value={remarks}
+      onChange={(e) => setRemarks(e.target.value)}
+      placeholder="Enter remarks here..."
+      style={{
+        width: '100%',
+        padding: '8px',
+        borderRadius: '6px',
+        border: '1px solid #ccc',
+        resize: 'none',
+        fontFamily: 'inherit',
+      }}
+    />
+  </DialogContent>
+
+  <DialogActions>
+    <Button onClick={() => setConfirmOpen(false)} color="inherit">
+      Cancel
+    </Button>
+    <Button
+      onClick={confirmSubmit}
+      color={confirmAction?.is_attending ? 'success' : 'error'}
+      variant="contained"
+    >
+      Confirm
+    </Button>
+  </DialogActions>
+</Dialog>
     </Box>
   );
 };
