@@ -1,4 +1,11 @@
-import { TableRow, TableCell, Button, Chip, Box, CircularProgress } from "@mui/material";
+import {
+  TableRow,
+  TableCell,
+  Button,
+  Chip,
+  Box,
+  CircularProgress,
+} from "@mui/material";
 
 const EventRow = ({
   event,
@@ -63,9 +70,12 @@ const EventRow = ({
           : "—"}
       </TableCell>
 
+      {/* 📝 REMARKS COLUMN */}
+      <TableCell>{event?.remarks?.trim() || "—"}</TableCell>
+
       <TableCell align="right">
-        {/* Only show buttons if user is Super Admin and event is not approved */}
-        {userRole?.trim().toUpperCase() === "S" && !isApproved && (
+        {/* Only show buttons if user is Super Admin, event is not approved, and not denied */}
+        {userRole?.trim().toUpperCase() === "S" && !isApproved && !isDenied && (
           <Box display="flex" justifyContent="flex-end" gap={1}>
             {/* ✅ APPROVE BUTTON */}
             <Button
@@ -102,13 +112,17 @@ const EventRow = ({
               )}
             </Button>
 
-            {/* ❌ DENY BUTTON */}
+            {/* ❌ DENY BUTTON with popup for remarks */}
             <Button
               variant="contained"
               size="small"
               onClick={(e) => {
                 e.stopPropagation();
-                handleDeny(event.id);
+                const remarks = window.prompt(
+                  "Enter remarks for denying this event (optional):",
+                  ""
+                );
+                handleDeny(event.id, remarks || null);
               }}
               disabled={denyingId === event.id || loading}
               sx={{
