@@ -308,14 +308,15 @@ const ViewReportsTabFilteredByBarangay = () => {
         loading={loading}
       />
 
-      <Box mt={2} display="flex" justifyContent="center">
-        <Pagination
-          count={totalPages}
-          page={page}
-          onChange={(_, value) => setPage(value)}
-          color="primary"
-        />
-      </Box>
+     <Box mt={2} display="flex" justifyContent="center">
+  <Pagination
+    count={Math.max(1, Math.ceil(reports.length / 10))} // force accurate count
+    page={page}
+    onChange={(_, value) => setPage(value)}
+    color="primary"
+  />
+</Box>
+
 
       {/* Remarks Dialog */}
       <Dialog open={remarksDialogOpen} onClose={() => setRemarksDialogOpen(false)}>
