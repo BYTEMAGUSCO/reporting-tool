@@ -14,6 +14,12 @@ import {
   DialogActions,
   TextField,
   Button,
+  Card,
+  CardContent,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 
 import ReportIcon from '@mui/icons-material/Report';
@@ -26,15 +32,48 @@ import useReports from './reporttab/useReports';
 import { showSuccessAlert, showErrorAlert } from '@/services/alert';
 import { loginBtnStyles, btnOutlinedStyles } from './reporttab/styles';
 
+const AnimatedCounter = ({ target, color }) => {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    let start = 0;
+    const duration = 400;
+    const step = Math.ceil(target / 20);
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) {
+        setCount(target);
+        clearInterval(timer);
+      } else {
+        setCount(start);
+      }
+    }, duration / 20);
+    return () => clearInterval(timer);
+  }, [target]);
+
+  return (
+    <Typography
+      variant="h4"
+      fontWeight="bold"
+      color={color}
+      sx={{ fontSize: '2rem', transition: '0.3s ease' }}
+    >
+      {count}
+    </Typography>
+  );
+};
+
 const ViewReportsTabFilteredByBarangay = () => {
   const [page, setPage] = useState(1);
   const [userBarangay, setUserBarangay] = useState(null);
   const [userRole, setUserRole] = useState(null);
+  const [barangays, setBarangays] = useState([]);
+  const [selectedBarangay, setSelectedBarangay] = useState('All');
   const [approvingReportId, setApprovingReportId] = useState(null);
   const [rejectingReportId, setRejectingReportId] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
   const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
   const [remarks, setRemarks] = useState('');
+  const [counts, setCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
 
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
@@ -44,20 +83,33 @@ const ViewReportsTabFilteredByBarangay = () => {
 
   const { reports, loading, error, totalPages, fetchReports } = useReports(
     userRole,
-    userBarangay,
+    selectedBarangay === 'All' ? userBarangay : selectedBarangay,
     page,
     activeTab
   );
 
-  const statusMap = {
-    0: 'P', // Pending
-    1: 'A', // Approved
-    2: 'D', // Denied
-  };
+  // Fetch barangays list
+  useEffect(() => {
+    const fetchBarangays = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/barangays`);
+        if (!res.ok) throw new Error('Failed to fetch barangays');
+        const data = await res.json();
+        setBarangays(data);
+      } catch (err) {
+        console.error('❌ Failed to load barangays:', err);
+      }
+    };
+    fetchBarangays();
+  }, []);
 
-  const filteredReports = reports.filter(
-    (report) => report.report_status === statusMap[activeTab]
-  );
+  // Recalculate counts for summary cards
+  useEffect(() => {
+    const approved = reports.filter((r) => r.report_status === 'A').length;
+    const pending = reports.filter((r) => r.report_status === 'P').length;
+    const rejected = reports.filter((r) => r.report_status === 'D').length;
+    setCounts({ approved, pending, rejected });
+  }, [reports]);
 
   const handleApprove = async (reportId) => {
     setApprovingReportId(reportId);
@@ -65,7 +117,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       const token =
         JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
-        'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/approve-report',
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/approve-report`,
         {
           method: 'POST',
           headers: {
@@ -90,14 +142,12 @@ const ViewReportsTabFilteredByBarangay = () => {
     }
   };
 
-  // Opens the remarks dialog before submitting the rejection
   const handleReject = (reportId) => {
     setRejectingReportId(reportId);
     setRemarks('');
     setRemarksDialogOpen(true);
   };
 
-  // Handles submitting the remarks
   const handleSubmitRemarks = async () => {
     if (!remarks.trim()) {
       await showErrorAlert('Please enter remarks before rejecting.');
@@ -108,7 +158,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       const token =
         JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
-        'https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/deny-report',
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deny-report`,
         {
           method: 'POST',
           headers: {
@@ -148,12 +198,89 @@ const ViewReportsTabFilteredByBarangay = () => {
       <Stack direction="row" alignItems="center" spacing={1} mb={1}>
         <ReportIcon fontSize="medium" sx={{ color: 'black' }} />
         <Typography variant="h5" fontWeight="bold">
-          Submitted Reports {userRole !== 'S' ? '' : ''}
+          Submitted Reports {userRole === 'S' ? '(All Barangays)' : ''}
         </Typography>
       </Stack>
 
       <Divider sx={{ mb: 2 }} />
 
+      {/* Barangay Filter Dropdown */}
+      {userRole === 'S' && (
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Filter by Barangay</InputLabel>
+          <Select
+            value={selectedBarangay}
+            label="Filter by Barangay"
+            onChange={(e) => setSelectedBarangay(e.target.value)}
+          >
+            <MenuItem value="All">All Barangays</MenuItem>
+            {barangays.map((b) => (
+              <MenuItem key={b.id} value={b.name}>
+                {b.name}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      )}
+
+      {/* Counters Section */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        justifyContent="space-between"
+        alignItems="center"
+        mb={3}
+      >
+        <Card
+          sx={{
+            flex: 1,
+            borderRadius: 3,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+            background: 'linear-gradient(135deg, #facc15, #eab308)',
+            color: 'black',
+          }}
+        >
+          <CardContent sx={{ textAlign: 'center' }}>
+            <HourglassBottomIcon sx={{ fontSize: 36, mb: 1 }} />
+            <AnimatedCounter target={counts.pending} color="black" />
+            <Typography>Pending Reports</Typography>
+          </CardContent>
+        </Card>
+
+        <Card
+          sx={{
+            flex: 1,
+            borderRadius: 3,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+            color: 'white',
+          }}
+        >
+          <CardContent sx={{ textAlign: 'center' }}>
+            <DoneAllIcon sx={{ fontSize: 36, mb: 1 }} />
+            <AnimatedCounter target={counts.approved} color="white" />
+            <Typography>Approved Reports</Typography>
+          </CardContent>
+        </Card>
+
+        <Card
+          sx={{
+            flex: 1,
+            borderRadius: 3,
+            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
+            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: 'white',
+          }}
+        >
+          <CardContent sx={{ textAlign: 'center' }}>
+            <BlockIcon sx={{ fontSize: 36, mb: 1 }} />
+            <AnimatedCounter target={counts.rejected} color="white" />
+            <Typography>Rejected Reports</Typography>
+          </CardContent>
+        </Card>
+      </Stack>
+
+      {/* Tabs */}
       <Paper elevation={2} sx={{ borderRadius: 2, mb: 2 }}>
         <Tabs
           value={activeTab}
@@ -170,7 +297,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       </Paper>
 
       <ReportsTable
-        reports={filteredReports}
+        reports={reports}
         approvingReportId={approvingReportId}
         rejectingReportId={rejectingReportId}
         onApprove={handleApprove}
