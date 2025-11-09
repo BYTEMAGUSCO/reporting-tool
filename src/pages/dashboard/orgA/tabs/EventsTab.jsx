@@ -152,13 +152,14 @@ const EventsTab = () => {
     }
   };
 
-  const handleDeny = async (id) => {
+  const handleDeny = async (id, remarks) => {
     setDenyingId(id);
     try {
       const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events/deny/${id}`;
       const res = await fetch(baseUrl, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`,  "Content-Type": "application/json" },
+        body: JSON.stringify({ remarks: remarks || "" }),
       });
       if (!res.ok) {
         let errMessage = "Failed to deny event";

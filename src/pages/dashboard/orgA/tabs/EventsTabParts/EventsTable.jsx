@@ -61,6 +61,7 @@ const EventsTable = ({
             <TableCell><strong>Barangay</strong></TableCell>
             <TableCell><strong>Description</strong></TableCell>
             <TableCell><strong>Date</strong></TableCell>
+            <TableCell><strong>Remarks</strong></TableCell>
             <TableCell align="right"><strong>Action</strong></TableCell>
           </TableRow>
         </TableHead>
