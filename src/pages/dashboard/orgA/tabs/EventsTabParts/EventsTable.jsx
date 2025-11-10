@@ -36,7 +36,6 @@ const EventsTable = ({
           <MenuItem value="P">Pending</MenuItem>
           <MenuItem value="A">Approved</MenuItem>
           <MenuItem value="D">Denied</MenuItem>
-          <MenuItem value="R">Rejected</MenuItem>
         </Select>
 
         <Select
