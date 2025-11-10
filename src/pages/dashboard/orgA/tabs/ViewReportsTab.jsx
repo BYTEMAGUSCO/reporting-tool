@@ -28,10 +28,12 @@ import BlockIcon from '@mui/icons-material/Block';
 import HourglassBottomIcon from '@mui/icons-material/HourglassBottom';
 
 import ReportsTable from './reporttab/ReportsTable';
-import useReports from './reporttab/useReports';
 import { showSuccessAlert, showErrorAlert } from '@/services/alert';
 import { loginBtnStyles, btnOutlinedStyles } from './reporttab/styles';
 
+const PAGE_SIZE = 10;
+
+// ✅ Animated counter (unchanged)
 const AnimatedCounter = ({ target, color }) => {
   const [count, setCount] = useState(0);
   useEffect(() => {
@@ -51,12 +53,7 @@ const AnimatedCounter = ({ target, color }) => {
   }, [target]);
 
   return (
-    <Typography
-      variant="h4"
-      fontWeight="bold"
-      color={color}
-      sx={{ fontSize: '2rem', transition: '0.3s ease' }}
-    >
+    <Typography variant="h4" fontWeight="bold" color={color}>
       {count}
     </Typography>
   );
@@ -68,137 +65,146 @@ const ViewReportsTabFilteredByBarangay = () => {
   const [userRole, setUserRole] = useState(null);
   const [barangays, setBarangays] = useState([]);
   const [selectedBarangay, setSelectedBarangay] = useState('All');
-  const [approvingReportId, setApprovingReportId] = useState(null);
-  const [rejectingReportId, setRejectingReportId] = useState(null);
-  const [activeTab, setActiveTab] = useState(0);
-  const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
-  const [remarks, setRemarks] = useState('');
-  const [counts, setCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
 
+  const [remarksDialogOpen, setRemarksDialogOpen] = useState(false);
+  const [rejectingReportId, setRejectingReportId] = useState(null);
+  const [remarks, setRemarks] = useState('');
+
+  const [activeTab, setActiveTab] = useState(0); // 0=pending,1=approved,2=rejected
+
+  // ✅ DATA STATES
+  const [allReports, setAllReports] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
+  const [pageReports, setPageReports] = useState([]);
+
+  const [counts, setCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
+  const [loading, setLoading] = useState(false);
+
+  // ✅ Load session
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
     setUserBarangay(session?.user?.user_metadata?.barangay || null);
     setUserRole(session?.user?.user_metadata?.role || null);
   }, []);
 
-  const { reports, loading, error, totalPages, fetchReports } = useReports(
-  userRole,
-  selectedBarangay === 'All' ? userBarangay : selectedBarangay,
-  page,
-  activeTab,
-  barangays // ✅ ADD THIS
-);
+  // ✅ Fetch ALL reports ONCE
+  useEffect(() => {
+    if (!userRole) return;
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const json = await res.json();
+        setAllReports(json.data || []);
+      } catch (err) {
+        console.error('Failed to load reports:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, [userRole]);
 
-
-  // Fetch barangays list
+  // ✅ Fetch barangays
   useEffect(() => {
     const fetchBarangays = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/barangays`);
-        if (!res.ok) throw new Error('Failed to fetch barangays');
         const data = await res.json();
         setBarangays(data);
       } catch (err) {
-        console.error('❌ Failed to load barangays:', err);
+        console.error('Failed to load barangays:', err);
       }
     };
     fetchBarangays();
   }, []);
 
-  // Recalculate counts for summary cards
+  // ✅ Filter all reports by barangay + tab
   useEffect(() => {
-    const approved = reports.filter((r) => r.report_status === 'A').length;
-    const pending = reports.filter((r) => r.report_status === 'P').length;
-    const rejected = reports.filter((r) => r.report_status === 'D').length;
-    setCounts({ approved, pending, rejected });
-  }, [reports]);
+    let f = [...allReports];
 
-  const handleApprove = async (reportId) => {
-    setApprovingReportId(reportId);
+    // ✅ Filter by barangay (super admin can choose)
+    if (userRole === 'S') {
+      if (selectedBarangay !== 'All') {
+        f = f.filter((r) => r.barangay === selectedBarangay);
+      }
+    } else {
+      f = f.filter((r) => r.barangay === userBarangay);
+    }
+
+    // ✅ Tab filter
+    const statusMap = ['P', 'A', 'D'];
+    f = f.filter((r) => r.report_status === statusMap[activeTab]);
+
+    setFilteredReports(f);
+    setPage(1);
+  }, [allReports, selectedBarangay, activeTab, userRole, userBarangay]);
+
+  // ✅ Counters (always based on full dataset)
+  useEffect(() => {
+    const approved = allReports.filter((r) => r.report_status === 'A').length;
+    const pending = allReports.filter((r) => r.report_status === 'P').length;
+    const rejected = allReports.filter((r) => r.report_status === 'D').length;
+    setCounts({ approved, pending, rejected });
+  }, [allReports]);
+
+  // ✅ Paginate filtered results
+  useEffect(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    setPageReports(filteredReports.slice(start, end));
+  }, [filteredReports, page]);
+
+  // ✅ Approve
+  const handleApprove = async (id) => {
     try {
-      const token =
-        JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+      const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/approve-report`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ report_id: reportId }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ report_id: id }),
         }
       );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to approve report');
-      }
-
-      await showSuccessAlert('Report approved! 🎉');
-      fetchReports(page);
-    } catch (error) {
-      await showErrorAlert(`Failed to approve: ${error.message}`);
-    } finally {
-      setApprovingReportId(null);
+      if (!res.ok) throw new Error('Failed to approve');
+      await showSuccessAlert('Report approved!');
+    } catch (err) {
+      await showErrorAlert(err.message);
     }
   };
 
-  const handleReject = (reportId) => {
-    setRejectingReportId(reportId);
-    setRemarks('');
-    setRemarksDialogOpen(true);
-  };
-
+  // ✅ Reject
   const handleSubmitRemarks = async () => {
-    if (!remarks.trim()) {
-      await showErrorAlert('Please enter remarks before rejecting.');
-      return;
-    }
-
+    if (!remarks.trim()) return showErrorAlert('Enter remarks');
     try {
-      const token =
-        JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+      const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/deny-report`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            report_id: rejectingReportId,
-            remarks: remarks.trim(),
-          }),
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ report_id: rejectingReportId, remarks }),
         }
       );
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to reject report');
-      }
-
-      await showSuccessAlert('Report rejected with remarks!');
-      fetchReports(page);
-      setRemarksDialogOpen(false);
-    } catch (error) {
-      await showErrorAlert(`Failed to reject: ${error.message}`);
+      if (!res.ok) throw new Error('Failed to reject');
+      await showSuccessAlert('Rejected!');
+    } catch (err) {
+      await showErrorAlert(err.message);
     } finally {
-      setRejectingReportId(null);
       setRemarks('');
+      setRemarksDialogOpen(false);
     }
-  };
-
-  const handleTabChange = (_, newValue) => {
-    setActiveTab(newValue);
-    setPage(1);
   };
 
   return (
     <Box sx={{ px: 2, py: 2 }}>
-      <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-        <ReportIcon fontSize="medium" sx={{ color: 'black' }} />
+      <Stack direction="row" alignItems="center" spacing={1} mb={2}>
+        <ReportIcon />
         <Typography variant="h5" fontWeight="bold">
           Submitted Reports {userRole === 'S' ? '(All Barangays)' : ''}
         </Typography>
@@ -206,7 +212,7 @@ const ViewReportsTabFilteredByBarangay = () => {
 
       <Divider sx={{ mb: 2 }} />
 
-      {/* Barangay Filter Dropdown */}
+      {/* ✅ Barangay Filter */}
       {userRole === 'S' && (
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Filter by Barangay</InputLabel>
@@ -215,135 +221,86 @@ const ViewReportsTabFilteredByBarangay = () => {
             label="Filter by Barangay"
             onChange={(e) => setSelectedBarangay(e.target.value)}
           >
-            <MenuItem value="All">All Barangays</MenuItem>
+            <MenuItem value="All">All</MenuItem>
             {barangays.map((b) => (
-              <MenuItem key={b.id} value={b.name}>
-                {b.name}
-              </MenuItem>
+              <MenuItem key={b.id} value={b.name}>{b.name}</MenuItem>
             ))}
           </Select>
         </FormControl>
       )}
 
-      {/* Counters Section */}
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        justifyContent="space-between"
-        alignItems="center"
-        mb={3}
-      >
-        <Card
-          sx={{
-            flex: 1,
-            borderRadius: 3,
-            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-            background: 'linear-gradient(135deg, #facc15, #eab308)',
-            color: 'black',
-          }}
-        >
+      {/* ✅ Counters */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
+        <Card sx={{ flex: 1, background: '#facc15' }}>
           <CardContent sx={{ textAlign: 'center' }}>
-            <HourglassBottomIcon sx={{ fontSize: 36, mb: 1 }} />
+            <HourglassBottomIcon />
             <AnimatedCounter target={counts.pending} color="black" />
             <Typography>Pending Reports</Typography>
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            flex: 1,
-            borderRadius: 3,
-            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-            background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-            color: 'white',
-          }}
-        >
+        <Card sx={{ flex: 1, background: '#22c55e', color: 'white' }}>
           <CardContent sx={{ textAlign: 'center' }}>
-            <DoneAllIcon sx={{ fontSize: 36, mb: 1 }} />
+            <DoneAllIcon />
             <AnimatedCounter target={counts.approved} color="white" />
             <Typography>Approved Reports</Typography>
           </CardContent>
         </Card>
 
-        <Card
-          sx={{
-            flex: 1,
-            borderRadius: 3,
-            boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-            color: 'white',
-          }}
-        >
+        <Card sx={{ flex: 1, background: '#ef4444', color: 'white' }}>
           <CardContent sx={{ textAlign: 'center' }}>
-            <BlockIcon sx={{ fontSize: 36, mb: 1 }} />
+            <BlockIcon />
             <AnimatedCounter target={counts.rejected} color="white" />
             <Typography>Rejected Reports</Typography>
           </CardContent>
         </Card>
       </Stack>
 
-      {/* Tabs */}
-      <Paper elevation={2} sx={{ borderRadius: 2, mb: 2 }}>
-        <Tabs
-          value={activeTab}
-          onChange={handleTabChange}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-          aria-label="reports filter tabs"
-        >
+      {/* ✅ Tabs */}
+      <Paper elevation={2} sx={{ mb: 2 }}>
+        <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth">
           <Tab icon={<HourglassBottomIcon />} label="Pending" />
           <Tab icon={<DoneAllIcon />} label="Approved" />
           <Tab icon={<BlockIcon />} label="Rejected" />
         </Tabs>
       </Paper>
 
+      {/* ✅ Table Component */}
       <ReportsTable
-        reports={reports}
-        approvingReportId={approvingReportId}
-        rejectingReportId={rejectingReportId}
-        onApprove={handleApprove}
-        onReject={handleReject}
+        reports={pageReports}
+        loading={loading}
+        activeTab={activeTab}
         loginBtnStyles={loginBtnStyles}
         btnOutlinedStyles={btnOutlinedStyles}
-        activeTab={activeTab}
-        loading={loading}
+        onApprove={handleApprove}
+        onReject={(id) => { setRejectingReportId(id); setRemarksDialogOpen(true); }}
       />
 
-     <Box mt={2} display="flex" justifyContent="center">
-  <Pagination
-    count={Math.max(1, Math.ceil(reports.length / 10))} // force accurate count
-    page={page}
-    onChange={(_, value) => setPage(value)}
-    color="primary"
-  />
-</Box>
+      {/* ✅ Pagination */}
+      <Box mt={2} display="flex" justifyContent="center">
+        <Pagination
+          count={Math.ceil(filteredReports.length / PAGE_SIZE)}
+          page={page}
+          onChange={(_, v) => setPage(v)}
+        />
+      </Box>
 
-
-      {/* Remarks Dialog */}
+      {/* ✅ Reject Dialog */}
       <Dialog open={remarksDialogOpen} onClose={() => setRemarksDialogOpen(false)}>
         <DialogTitle>Reject Report</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" sx={{ mb: 1 }}>
-            Please provide remarks or reasons for rejecting this report:
-          </Typography>
           <TextField
-            autoFocus
-            margin="dense"
-            label="Remarks"
-            type="text"
             fullWidth
             multiline
             rows={3}
+            label="Remarks"
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setRemarksDialogOpen(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleSubmitRemarks} variant="contained" color="error">
+          <Button onClick={() => setRemarksDialogOpen(false)}>Cancel</Button>
+          <Button color="error" variant="contained" onClick={handleSubmitRemarks}>
             Submit
           </Button>
         </DialogActions>

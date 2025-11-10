@@ -42,6 +42,14 @@ export async function generateReportPDF({
       };
     };
 
+const barangayRaw =
+  (typeof getBarangayNameFromSession === 'function' &&
+    (await getBarangayNameFromSession())) ||
+  'Barangay';
+
+const safeBarangay = stripUnsupportedChars(barangayRaw).replace(/\s+/g, '_');
+
+
     let ctx = makePage();
     const newPage = () => (ctx = makePage());
 
@@ -517,7 +525,8 @@ if (footerQuestion && footerQuestion.config) {
       session?.user?.user_metadata?.full_name || session?.user?.email || 'Anonymous';
     const safeUserName = stripUnsupportedChars(userNameRaw).replace(/\s+/g, '_');
     const pdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-    const safeFileName = `${formName.replace(/\s+/g, '_')}_${safeUserName}_submission.pdf`;
+    const safeFileName = `${safeBarangay}_${formName.replace(/\s+/g, '_')}_${safeUserName}_submission.pdf`;
+
     formData.append('file', pdfBlob, safeFileName);
 
     const uploadRes = await fetch(

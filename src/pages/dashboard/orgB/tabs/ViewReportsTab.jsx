@@ -26,6 +26,9 @@ import DoneAllIcon from '@mui/icons-material/DoneAll';
 import BlockIcon from '@mui/icons-material/Block';
 import HourglassEmptyIcon from '@mui/icons-material/HourglassEmpty';
 
+const PAGE_SIZE = 10;
+const SKELETON_ROW_COUNT = 5;
+
 const StyledTableCell = (props) => (
   <TableCell
     {...props}
@@ -36,83 +39,95 @@ const StyledTableCell = (props) => (
       color: 'black',
       paddingY: 1,
       paddingX: 2,
-      textTransform: 'none',
       fontSize: '0.875rem',
     }}
   />
 );
 
-const SKELETON_ROW_COUNT = 5;
-
 const ViewReportsTabFilteredByBarangay = () => {
-  const [reports, setReports] = useState([]);
+  const [allReports, setAllReports] = useState([]);       // ✅ full list
+  const [filteredReports, setFilteredReports] = useState([]); // ✅ after tab + barangay
+  const [pageItems, setPageItems] = useState([]);         // ✅ sliced items for the table
+
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [userBarangay, setUserBarangay] = useState(null);
   const [userRole, setUserRole] = useState(null);
+
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0 });
 
   // Tabs: 0=approved, 1=pending, 2=rejected
   const [activeTab, setActiveTab] = useState(0);
 
+  // Get session info
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
     setUserBarangay(session?.user?.user_metadata?.barangay || null);
     setUserRole(session?.user?.user_metadata?.role || null);
   }, []);
 
-  const fetchReports = async (pageNumber = 1) => {
+  // ✅ Fetch ALL reports ONCE
+  const fetchReports = async () => {
     if (!userRole) return;
+
     setLoading(true);
-    setError(null);
     try {
       const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
+
       const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?page=${pageNumber}&limit=10`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Failed to load reports');
-      }
+
       const json = await res.json();
-      let filteredReports = json.data || [];
+      const data = json.data || [];
 
-      if (userRole === 'S') {
-        filteredReports = json.data || [];
-      } else if (userBarangay) {
-        filteredReports = json.data.filter((r) => r.barangay === userBarangay);
-      }
+      // ✅ Filter by barangay if not superadmin
+      const barangayFiltered =
+        userRole === 'S' ? data : data.filter((r) => r.barangay === userBarangay);
 
-      // Count stats
-      const approvedCount = filteredReports.filter((r) => r.report_status === 'A').length;
-      const pendingCount = filteredReports.filter((r) => r.report_status === 'P').length;
-      const rejectedCount = filteredReports.filter((r) => r.report_status === 'D').length;
-      setStats({ approved: approvedCount, pending: pendingCount, rejected: rejectedCount });
-
-      // Filter by tab:
-      const tabFiltered = filteredReports.filter((r) => {
-        if (activeTab === 0) return r.report_status === 'A';
-        if (activeTab === 1) return r.report_status === 'P';
-        return r.report_status === 'D';
-      });
-
-      setReports(tabFiltered);
-      setTotalPages(json.pagination?.totalPages || 1);
+      setAllReports(barangayFiltered);
     } catch (err) {
-      setError(err.message || 'Unknown error');
+      console.error('❌ Fetch error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (userRole) fetchReports(page);
-  }, [userRole, userBarangay, page, activeTab]);
+    if (userRole) fetchReports();
+  }, [userRole, userBarangay]);
 
-  // Simple animated counter hook
+  // ✅ Recalculate stats + tab filters whenever allReports or tab changes
+  useEffect(() => {
+    const approved = allReports.filter((r) => r.report_status === 'A');
+    const pending = allReports.filter((r) => r.report_status === 'P');
+    const rejected = allReports.filter((r) => r.report_status === 'D');
+
+    setStats({
+      approved: approved.length,
+      pending: pending.length,
+      rejected: rejected.length,
+    });
+
+    // ✅ Tab filtering
+    let t = [];
+    if (activeTab === 0) t = approved;
+    if (activeTab === 1) t = pending;
+    if (activeTab === 2) t = rejected;
+
+    setFilteredReports(t);
+    setPage(1); // reset to page 1 on tab switch
+  }, [allReports, activeTab]);
+
+  // ✅ Slice page items
+  useEffect(() => {
+    const start = (page - 1) * PAGE_SIZE;
+    const end = start + PAGE_SIZE;
+    setPageItems(filteredReports.slice(start, end));
+  }, [filteredReports, page]);
+
+  // ✅ Simple animated counter
   const AnimatedCounter = ({ target, color }) => {
     const [count, setCount] = useState(0);
     useEffect(() => {
@@ -131,12 +146,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       return () => clearInterval(timer);
     }, [target]);
     return (
-      <Typography
-        variant="h4"
-        fontWeight="bold"
-        color={color}
-        sx={{ fontSize: '2rem', transition: '0.3s ease' }}
-      >
+      <Typography variant="h4" fontWeight="bold" color={color}>
         {count}
       </Typography>
     );
@@ -152,204 +162,101 @@ const ViewReportsTabFilteredByBarangay = () => {
           </Typography>
         </Stack>
 
-        {/* 🔥 Status Counters Section */}
-        <Stack
-          direction={{ xs: 'column', sm: 'row' }}
-          spacing={2}
-          justifyContent="space-between"
-          alignItems="center"
-          mb={3}
-        >
-          <Card
-            sx={{
-              flex: 1,
-              borderRadius: 3,
-              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-              background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-              color: 'white',
-            }}
-          >
+        {/* ✅ Counters */}
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
+          <Card sx={{ flex: 1, p: 2, background: '#22c55e', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <DoneAllIcon sx={{ fontSize: 40, mb: 1 }} />
+              <DoneAllIcon sx={{ fontSize: 40 }} />
               <AnimatedCounter target={stats.approved} color="white" />
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Approved Reports
-              </Typography>
+              <Typography>Approved</Typography>
             </CardContent>
           </Card>
 
-          <Card
-            sx={{
-              flex: 1,
-              borderRadius: 3,
-              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-              background: 'linear-gradient(135deg, #facc15, #eab308)',
-              color: 'black',
-            }}
-          >
+          <Card sx={{ flex: 1, p: 2, background: '#facc15' }}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <HourglassEmptyIcon sx={{ fontSize: 40, mb: 1 }} />
+              <HourglassEmptyIcon sx={{ fontSize: 40 }} />
               <AnimatedCounter target={stats.pending} color="black" />
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Pending Reports
-              </Typography>
+              <Typography>Pending</Typography>
             </CardContent>
           </Card>
 
-          <Card
-            sx={{
-              flex: 1,
-              borderRadius: 3,
-              boxShadow: '0 4px 10px rgba(0,0,0,0.08)',
-              background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-              color: 'white',
-            }}
-          >
+          <Card sx={{ flex: 1, p: 2, background: '#ef4444', color: 'white' }}>
             <CardContent sx={{ textAlign: 'center' }}>
-              <BlockIcon sx={{ fontSize: 40, mb: 1 }} />
+              <BlockIcon sx={{ fontSize: 40 }} />
               <AnimatedCounter target={stats.rejected} color="white" />
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Rejected Reports
-              </Typography>
+              <Typography>Rejected</Typography>
             </CardContent>
           </Card>
         </Stack>
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* MUI Tabs */}
+        {/* ✅ Tabs */}
         <Tabs
           value={activeTab}
-          onChange={(_, newValue) => setActiveTab(newValue)}
-          indicatorColor="primary"
-          textColor="primary"
+          onChange={(_, v) => setActiveTab(v)}
           variant="fullWidth"
           sx={{ mb: 2 }}
         >
-          <Tab icon={<DoneAllIcon />} iconPosition="start" label="Approved" />
-          <Tab icon={<HourglassEmptyIcon />} iconPosition="start" label="Pending" />
-          <Tab icon={<BlockIcon />} iconPosition="start" label="Rejected" />
+          <Tab icon={<DoneAllIcon />} label="Approved" />
+          <Tab icon={<HourglassEmptyIcon />} label="Pending" />
+          <Tab icon={<BlockIcon />} label="Rejected" />
         </Tabs>
 
-        {/* Table */}
-        {loading ? (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <StyledTableCell>Report Name</StyledTableCell>
-                  <StyledTableCell>Submitted On</StyledTableCell>
-                  {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-                  <StyledTableCell align="right">Actions</StyledTableCell>
+        {/* ✅ Table */}
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <StyledTableCell>Report Name</StyledTableCell>
+                <StyledTableCell>Submitted On</StyledTableCell>
+                {(activeTab === 0 || activeTab === 2) && (
+                  <StyledTableCell>
+                    {activeTab === 0 ? 'Approved By' : 'Denied By'}
+                  </StyledTableCell>
+                )}
+                {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
+                <StyledTableCell align="right">Actions</StyledTableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {pageItems.map((report) => (
+                <TableRow key={report.report_id}>
+                  <TableCell>{report.report_name}</TableCell>
+                  <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
+
+                  {(activeTab === 0 || activeTab === 2) && (
+                    <TableCell>{report.reviewed_by || 'N/A'}</TableCell>
+                  )}
+
+                  {activeTab === 2 && (
+                    <TableCell>{report.remarks || 'No remarks'}</TableCell>
+                  )}
+
+                  <TableCell align="right">
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={<PictureAsPdfOutlinedIcon />}
+                      onClick={() => window.open(report.fileUrl, '_blank')}
+                      sx={{ background: '#facc15', color: 'black' }}
+                    >
+                      View PDF
+                    </Button>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-              <TableBody>
-                {[...Array(SKELETON_ROW_COUNT)].map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton variant="text" width="60%" /></TableCell>
-                    <TableCell><Skeleton variant="text" width="40%" /></TableCell>
-                    {activeTab === 2 && (
-                      <TableCell><Skeleton variant="text" width="70%" /></TableCell>
-                    )}
-                    <TableCell align="right">
-                      <Skeleton variant="rectangular" width={90} height={30} sx={{ borderRadius: 1 }} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : error ? (
-          <Typography color="error" sx={{ mt: 2 }}>
-            {error}
-          </Typography>
-        ) : reports.length === 0 ? (
-          <Typography textAlign="center" py={3}>
-            No reports submitted yet. 😴
-          </Typography>
-        ) : (
-          <TableContainer>
-  <Table size="small">
-    <TableHead>
-      <TableRow>
-        <StyledTableCell>Report Name</StyledTableCell>
-        <StyledTableCell>Submitted On</StyledTableCell>
-        {(activeTab === 0 || activeTab === 1 || activeTab === 2) && (
-          <StyledTableCell>{activeTab === 0 ? 'Approved By' : activeTab === 2 ? 'Denied By' : ''}</StyledTableCell>
-        )}
-        {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-        <StyledTableCell align="right">Actions</StyledTableCell>
-      </TableRow>
-    </TableHead>
-    <TableBody>
-      {reports.map((report) => (
-        <TableRow key={report.report_id}>
-          <TableCell>{report.report_name || 'Unnamed Report'}</TableCell>
-          <TableCell>{new Date(report.created_at).toLocaleString()}</TableCell>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
 
-          {(activeTab === 0 || activeTab === 2) && (
-            <TableCell
-              sx={{
-                whiteSpace: 'normal',
-                maxWidth: 300,
-                wordBreak: 'break-word',
-                fontStyle: report.reviewed_by ? 'normal' : 'italic',
-                color: report.reviewed_by ? 'inherit' : 'gray',
-              }}
-            >
-              {report.reviewed_by || 'N/A'}
-            </TableCell>
-          )}
-
-          {activeTab === 2 && (
-            <TableCell
-              sx={{
-                whiteSpace: 'normal',
-                maxWidth: 300,
-                wordBreak: 'break-word',
-                fontStyle: report.remarks ? 'normal' : 'italic',
-                color: report.remarks ? 'inherit' : 'gray',
-              }}
-            >
-              {report.remarks || 'No remarks provided'}
-            </TableCell>
-          )}
-
-          <TableCell align="right">
-            <Stack direction="row" spacing={1} justifyContent="flex-end">
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<PictureAsPdfOutlinedIcon />}
-                onClick={() => window.open(report.fileUrl, '_blank')}
-                sx={{
-                  textTransform: 'none',
-                  fontWeight: 'bold',
-                  borderRadius: '0.5rem',
-                  backgroundColor: '#facc15',
-                  color: 'black',
-                  boxShadow: '0 3px 6px rgba(128,128,128,0.4)',
-                  '&:hover': { backgroundColor: '#fbbf24' },
-                }}
-              >
-                View PDF
-              </Button>
-            </Stack>
-          </TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-</TableContainer>
-
-        )}
-
+        {/* ✅ Pagination */}
         <Box mt={2} display="flex" justifyContent="center">
           <Pagination
-            count={totalPages}
+            count={Math.ceil(filteredReports.length / PAGE_SIZE)}
             page={page}
-            onChange={(_, value) => setPage(value)}
-            color="primary"
+            onChange={(_, v) => setPage(v)}
           />
         </Box>
       </Paper>

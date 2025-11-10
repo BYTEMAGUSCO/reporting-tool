@@ -12,7 +12,8 @@ const findBarangayInFilename = (fileName, barangays) => {
 };
 
 const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => {
-  const [reports, setReports] = useState([]);
+  const [reports, setReports] = useState([]);          // ✅ sliced (page only)
+  const [allFiltered, setAllFiltered] = useState([]);  // ✅ ALL matched items
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [totalPages, setTotalPages] = useState(1);
@@ -22,8 +23,9 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
   const fetchReports = useCallback(
     async () => {
       if (!userRole) return;
+      if (!barangays.length) return;
 
-      console.log(`📌 Filter: ${userBarangay} | Tab: ${activeTab}`);
+      console.log(`📌 Filtered Barangay: ${userBarangay} | Tab: ${activeTab}`);
 
       setLoading(true);
       setError(null);
@@ -32,7 +34,7 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
         const token =
           JSON.parse(sessionStorage.getItem("session"))?.access_token ?? "";
 
-        // ✅ Fetch ALL reports (not paginated)
+        // ✅ Fetch ALL reports
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -46,6 +48,7 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
         const json = await res.json();
         const raw = json.data || [];
 
+        // ✅ Attach barangay name based on filename
         const enriched = raw.map((r) => ({
           ...r,
           barangay_name: findBarangayInFilename(r.report_name, barangays),
@@ -53,7 +56,7 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
 
         let filtered = enriched;
 
-        // ✅ Barangay filtering
+        // ✅ Filtering by barangay
         if (userRole === "S" || userRole === "D") {
           if (userBarangay !== "All") {
             filtered = filtered.filter((r) => r.barangay_name === userBarangay);
@@ -62,16 +65,19 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
           filtered = filtered.filter((r) => r.barangay_name === userBarangay);
         }
 
-        // ✅ Status filtering
+        // ✅ Filtering by status
         const statusCode = statusMap[activeTab];
         filtered = filtered.filter((r) => r.report_status === statusCode);
 
-        // ✅ Client-side pagination
+        // ✅ Save the FULL list (for counters + true pagination)
+        setAllFiltered(filtered);
+
+        // ✅ Client-side pagination (10 per page)
         const start = (page - 1) * 10;
         const end = start + 10;
-
         setReports(filtered.slice(start, end));
-        setTotalPages(Math.ceil(filtered.length / 10));
+
+        setTotalPages(Math.max(1, Math.ceil(filtered.length / 10)));
 
       } catch (err) {
         console.error("❌ ERROR:", err.message);
@@ -86,13 +92,10 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
   );
 
   useEffect(() => {
-    if (!userRole) return;
-    if (!barangays.length) return;
-
     fetchReports();
-  }, [fetchReports, barangays]);
+  }, [fetchReports]);
 
-  return { reports, loading, error, totalPages, fetchReports };
+  return { reports, allFiltered, loading, error, totalPages, fetchReports };
 };
 
 export default useReports;
