@@ -82,11 +82,13 @@ const ViewReportsTabFilteredByBarangay = () => {
   }, []);
 
   const { reports, loading, error, totalPages, fetchReports } = useReports(
-    userRole,
-    selectedBarangay === 'All' ? userBarangay : selectedBarangay,
-    page,
-    activeTab
-  );
+  userRole,
+  selectedBarangay === 'All' ? userBarangay : selectedBarangay,
+  page,
+  activeTab,
+  barangays // ✅ ADD THIS
+);
+
 
   // Fetch barangays list
   useEffect(() => {
