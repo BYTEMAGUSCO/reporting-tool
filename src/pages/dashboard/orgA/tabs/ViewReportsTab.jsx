@@ -129,7 +129,7 @@ const ViewReportsTabFilteredByBarangay = () => {
     let f = [...allReports];
 
     // ✅ Filter by barangay (super admin can choose)
-    if (userRole === 'S') {
+    if (userRole === 'S' || userRole === 'D') {
       if (selectedBarangay !== 'All') {
         f = f.filter((r) => String(r.barangay) === String(selectedBarangay));
       }
@@ -214,7 +214,7 @@ const ViewReportsTabFilteredByBarangay = () => {
       <Divider sx={{ mb: 2 }} />
 
       {/* ✅ Barangay Filter */}
-      {userRole === 'S' && (
+      {(userRole === 'S' || userRole === 'D') && (
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Filter by Barangay</InputLabel>
           <Select
