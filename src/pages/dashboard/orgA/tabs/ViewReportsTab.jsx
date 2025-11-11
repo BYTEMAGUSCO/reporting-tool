@@ -116,6 +116,7 @@ const ViewReportsTabFilteredByBarangay = () => {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/barangays`);
         const data = await res.json();
         setBarangays(data);
+        console.log(data);
       } catch (err) {
         console.error('Failed to load barangays:', err);
       }
@@ -130,10 +131,10 @@ const ViewReportsTabFilteredByBarangay = () => {
     // ✅ Filter by barangay (super admin can choose)
     if (userRole === 'S') {
       if (selectedBarangay !== 'All') {
-        f = f.filter((r) => r.barangay === selectedBarangay);
+        f = f.filter((r) => String(r.barangay) === String(selectedBarangay));
       }
     } else {
-      f = f.filter((r) => r.barangay === userBarangay);
+      f = f.filter((r) => String(r.barangay) === String(userBarangay));
     }
 
     // ✅ Tab filter
@@ -223,7 +224,7 @@ const ViewReportsTabFilteredByBarangay = () => {
           >
             <MenuItem value="All">All</MenuItem>
             {barangays.map((b) => (
-              <MenuItem key={b.id} value={b.name}>{b.name}</MenuItem>
+              <MenuItem key={b.id} value={b.id}>{b.name}</MenuItem>
             ))}
           </Select>
         </FormControl>
