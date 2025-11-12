@@ -50,6 +50,11 @@ const ReportsTable = ({
     (report) => report.report_status === statusMap[activeTab]
   );
 
+  // ✅ Log approved reports only
+  if (statusMap[activeTab] === 'A') {
+    console.log('[✅ Approved Reports]', filteredReports);
+  }
+
   if (loading) {
     return (
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
@@ -60,9 +65,7 @@ const ReportsTable = ({
               <StyledTableCell>Submitted On</StyledTableCell>
               {(activeTab === 1 || activeTab === 2) && (
                 <>
-                  <StyledTableCell>
-                    {activeTab === 1 ? 'Approved By' : 'Denied By'}
-                  </StyledTableCell>
+                  <StyledTableCell>Reviewed By</StyledTableCell>
                   <StyledTableCell>Reviewed At</StyledTableCell>
                 </>
               )}
@@ -70,6 +73,7 @@ const ReportsTable = ({
               <StyledTableCell align="right">Actions</StyledTableCell>
             </TableRow>
           </TableHead>
+
           <TableBody>
             {[...Array(5)].map((_, i) => (
               <TableRow key={i}>
@@ -108,9 +112,7 @@ const ReportsTable = ({
             <StyledTableCell>Submitted On</StyledTableCell>
             {(activeTab === 1 || activeTab === 2) && (
               <>
-                <StyledTableCell>
-                  {activeTab === 1 ? 'Approved By' : 'Denied By'}
-                </StyledTableCell>
+                <StyledTableCell>Reviewed By</StyledTableCell>
                 <StyledTableCell>Reviewed At</StyledTableCell>
               </>
             )}
@@ -146,27 +148,20 @@ const ReportsTable = ({
 
                 {(activeTab === 1 || activeTab === 2) && (
                   <>
+                    {/* ✅ Unified Reviewed By */}
                     <TableCell
                       sx={{
                         whiteSpace: 'normal',
                         maxWidth: 300,
                         wordBreak: 'break-word',
-                        color:
-                          report.approved_by || report.denied_by
-                            ? 'inherit'
-                            : 'gray',
-                        fontStyle:
-                          report.approved_by || report.denied_by
-                            ? 'normal'
-                            : 'italic',
+                        color: report.reviewed_by ? 'inherit' : 'gray',
+                        fontStyle: report.reviewed_by ? 'normal' : 'italic',
                       }}
                     >
-                      {activeTab === 1
-                        ? report.approved_by || 'No approver email'
-                        : report.denied_by || 'No denier email'}
+                      {report.reviewed_by || 'No reviewer email'}
                     </TableCell>
 
-                    {/* ✅ New Reviewed At Column */}
+                    {/* ✅ Reviewed At */}
                     <TableCell
                       sx={{
                         whiteSpace: 'nowrap',
