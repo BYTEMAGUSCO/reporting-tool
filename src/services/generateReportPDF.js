@@ -102,55 +102,44 @@ export async function generateReportPDF({
       if (ctx.y - needed < 70) newPage();
     };
 
-  // ✅ Better wrapText: supports long words, no spaces, auto-breaks properly
-const wrapText = (text, maxWidth, font, size) => {
-  const cleanText = stripUnsupportedChars(text || '');
-  const words = cleanText.split(' ');
-  const lines = [];
-  let currentLine = '';
+    // === WRAP TEXT ===
+    const wrapText = (text, maxWidth, font, size) => {
+      const cleanText = stripUnsupportedChars(text || '');
+      const words = cleanText.split(' ');
+      const lines = [];
+      let currentLine = '';
 
-  for (const word of words) {
-    // if a single word is too long, split it into chunks
-    if (font.widthOfTextAtSize(word, size) > maxWidth) {
-      let chunk = '';
-      for (const ch of word) {
-        if (font.widthOfTextAtSize(chunk + ch, size) > maxWidth) {
-          lines.push(chunk);
-          chunk = ch;
-        } else {
-          chunk += ch;
-        }
-      }
-      if (chunk) {
-        if (currentLine) {
-          // if currentLine + chunk still fits, merge
-          const testLine = `${currentLine} ${chunk}`;
-          if (font.widthOfTextAtSize(testLine, size) <= maxWidth) {
-            currentLine = testLine;
-          } else {
-            lines.push(currentLine);
-            currentLine = chunk;
+      for (const word of words) {
+        if (font.widthOfTextAtSize(word, size) > maxWidth) {
+          let chunk = '';
+          for (const ch of word) {
+            if (font.widthOfTextAtSize(chunk + ch, size) > maxWidth) {
+              lines.push(chunk);
+              chunk = ch;
+            } else chunk += ch;
+          }
+          if (chunk) {
+            if (currentLine) {
+              const testLine = `${currentLine} ${chunk}`;
+              if (font.widthOfTextAtSize(testLine, size) <= maxWidth) {
+                currentLine = testLine;
+              } else {
+                lines.push(currentLine);
+                currentLine = chunk;
+              }
+            } else lines.push(chunk);
           }
         } else {
-          lines.push(chunk);
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          if (font.widthOfTextAtSize(testLine, size) > maxWidth) {
+            lines.push(currentLine);
+            currentLine = word;
+          } else currentLine = testLine;
         }
       }
-    } else {
-      // normal space-based wrapping
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      if (font.widthOfTextAtSize(testLine, size) > maxWidth) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
-    }
-  }
-
-  if (currentLine) lines.push(currentLine);
-  return lines;
-};
-
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    };
 
     // === TABLE DRAW FUNCTION ===
     const drawTable = ({ question }) => {
@@ -173,75 +162,101 @@ const wrapText = (text, maxWidth, font, size) => {
       const paddingY = 3;
       let y = ctx.y;
 
-const drawHeader = (yTop) => {
-  // ✅ Wrap indicator / first column
-  const indicatorLines = wrapText(indicatorLabel.toUpperCase(), indicatorWidth - 10, fontBold, baseFontSize);
-  const indicatorHeight = indicatorLines.length * lineHeight + paddingY * 2;
+      const drawHeader = (yTop) => {
+        const indicatorLines = wrapText(
+          indicatorLabel.toUpperCase(),
+          indicatorWidth - 10,
+          fontBold,
+          baseFontSize
+        );
+        const indicatorHeight = indicatorLines.length * lineHeight + paddingY * 2;
 
-  // ✅ Wrap all column headers
-  const colHeaderHeights = columns.map((col, i) => {
-    const lines = wrapText(col.label || '', colWidths[i] - 8, fontBold, baseFontSize);
-    return lines.length * lineHeight + paddingY * 2;
-  });
+        const colHeaderHeights = columns.map((col, i) => {
+          const lines = wrapText(col.label || '', colWidths[i] - 8, fontBold, baseFontSize);
+          return lines.length * lineHeight + paddingY * 2;
+        });
+        const headerHeight = Math.max(indicatorHeight, ...colHeaderHeights);
 
-  // ✅ Take the tallest section as the final header height
-  const headerHeight = Math.max(indicatorHeight, ...colHeaderHeights);
+        // background
+        ctx.page.drawRectangle({
+          x: startX,
+          y: yTop - headerHeight,
+          width: tableWidth,
+          height: headerHeight,
+          color: rgb(0.94, 0.94, 0.94),
+        });
+        ctx.page.drawRectangle({
+          x: startX,
+          y: yTop - headerHeight,
+          width: indicatorWidth,
+          height: headerHeight,
+          color: rgb(0.98, 0.98, 0.91),
+        });
 
-  // Draw header backgrounds
-  ctx.page.drawRectangle({
-    x: startX,
-    y: yTop - headerHeight,
-    width: tableWidth,
-    height: headerHeight,
-    color: rgb(0.94, 0.94, 0.94),
-  });
-  ctx.page.drawRectangle({
-    x: startX,
-    y: yTop - headerHeight,
-    width: indicatorWidth,
-    height: headerHeight,
-    color: rgb(0.98, 0.98, 0.91),
-  });
+        // indicator header text
+        let indicatorY =
+          yTop - (headerHeight - indicatorLines.length * lineHeight) / 2 - lineHeight / 2;
+        indicatorLines.forEach((line) => {
+          ctx.page.drawText(line, {
+            x: startX + 6,
+            y: indicatorY,
+            size: baseFontSize,
+            font: fontBold,
+            color: rgb(0, 0, 0),
+          });
+          indicatorY -= lineHeight;
+        });
 
-  // ✅ Draw wrapped indicator header text (center vertically)
-  let indicatorY = yTop - paddingY - lineHeight;
-  const indicatorStartY = yTop - (headerHeight - indicatorLines.length * lineHeight) / 2 - lineHeight / 2;
-  indicatorY = indicatorStartY;
+        // column header texts
+        let x = startX + indicatorWidth;
+        columns.forEach((col, i) => {
+          const label = stripUnsupportedChars(col.label || '').toUpperCase();
+          const lines = wrapText(label, colWidths[i] - 8, fontBold, baseFontSize);
+          let textY =
+            yTop - (headerHeight - lines.length * lineHeight) / 2 - lineHeight / 2;
+          lines.forEach((line) => {
+            const textWidth = fontBold.widthOfTextAtSize(line, baseFontSize);
+            ctx.page.drawText(line, {
+              x: x + (colWidths[i] - textWidth) / 2,
+              y: textY,
+              size: baseFontSize,
+              font: fontBold,
+              color: rgb(0, 0, 0),
+            });
+            textY -= lineHeight;
+          });
+          x += colWidths[i];
+        });
 
-  indicatorLines.forEach((line) => {
-    ctx.page.drawText(line, {
-      x: startX + 6,
-      y: indicatorY,
-      size: baseFontSize,
-      font: fontBold,
-      color: rgb(0, 0, 0),
-    });
-    indicatorY -= lineHeight;
-  });
+        // ✅ vertical divider lines for header
+        let hx = startX;
+        ctx.page.drawLine({
+          start: { x: hx, y: yTop },
+          end: { x: hx, y: yTop - headerHeight },
+          thickness: 0.8,
+          color: rgb(0, 0, 0),
+        });
+        hx += indicatorWidth;
+        for (let i = 0; i < colWidths.length; i++) {
+          ctx.page.drawLine({
+            start: { x: hx, y: yTop },
+            end: { x: hx, y: yTop - headerHeight },
+            thickness: 0.8,
+            color: rgb(0, 0, 0),
+          });
+          hx += colWidths[i];
+        }
 
-  // ✅ Draw wrapped column headers
-  let x = startX + indicatorWidth;
-  columns.forEach((col, i) => {
-    const label = stripUnsupportedChars(col.label || '').toUpperCase();
-    const lines = wrapText(label, colWidths[i] - 8, fontBold, baseFontSize);
-    const colStartY = yTop - (headerHeight - lines.length * lineHeight) / 2 - lineHeight / 2;
-    let textY = colStartY;
-    lines.forEach((line) => {
-      const textWidth = fontBold.widthOfTextAtSize(line, baseFontSize);
-      ctx.page.drawText(line, {
-        x: x + (colWidths[i] - textWidth) / 2,
-        y: textY,
-        size: baseFontSize,
-        font: fontBold,
-        color: rgb(0, 0, 0),
-      });
-      textY -= lineHeight;
-    });
-    x += colWidths[i];
-  });
+        // bottom header border
+        ctx.page.drawLine({
+          start: { x: startX, y: yTop - headerHeight },
+          end: { x: startX + tableWidth, y: yTop - headerHeight },
+          thickness: 0.8,
+          color: rgb(0, 0, 0),
+        });
 
-  return headerHeight;
-};
+        return headerHeight;
+      };
 
       const drawTableTitleRow = (yTop, titleText) => {
         const titleHeight = 18;
@@ -252,26 +267,22 @@ const drawHeader = (yTop) => {
           height: titleHeight,
           color: rgb(0.96, 0.96, 0.96),
         });
-
         ctx.page.drawText(stripUnsupportedChars(titleText || ''), {
           x: startX + 6,
           y: yTop - 13,
           size: baseFontSize + 1,
           font: fontBold,
         });
-
-        // borders
         ctx.page.drawLine({
           start: { x: startX, y: yTop - titleHeight },
           end: { x: startX + tableWidth, y: yTop - titleHeight },
           thickness: 0.8,
           color: rgb(0, 0, 0),
         });
-
         return titleHeight;
       };
 
-      // draw title + header
+      // draw title and header
       const titleHeight = drawTableTitleRow(y, question.label || 'Table');
       y -= titleHeight;
       const headerHeight = drawHeader(y);
@@ -282,11 +293,24 @@ const drawHeader = (yTop) => {
       for (let r = 0; r < rows.length; r++) {
         const rowObj = rows[r] || {};
         const indicatorText = stripUnsupportedChars(rowObj.label || '');
-        const indicatorLines = wrapText(indicatorText, indicatorWidth - 10, fontRegular, baseFontSize);
-        const cellLinesArray = columns.map((col) =>
-          wrapText(tableData?.[r]?.[col.key] ?? '', colWidths[columns.indexOf(col)] - 8, fontRegular, baseFontSize)
+        const indicatorLines = wrapText(
+          indicatorText,
+          indicatorWidth - 10,
+          fontRegular,
+          baseFontSize
         );
-        const maxLines = Math.max(indicatorLines.length, ...cellLinesArray.map((l) => l.length));
+        const cellLinesArray = columns.map((col) =>
+          wrapText(
+            tableData?.[r]?.[col.key] ?? '',
+            colWidths[columns.indexOf(col)] - 8,
+            fontRegular,
+            baseFontSize
+          )
+        );
+        const maxLines = Math.max(
+          indicatorLines.length,
+          ...cellLinesArray.map((l) => l.length)
+        );
         const rowHeight = paddingY * 2 + maxLines * lineHeight;
 
         if (y - rowHeight < 80) {
@@ -296,6 +320,7 @@ const drawHeader = (yTop) => {
           y -= headerHeight;
         }
 
+        // draw indicator + cells
         let textY = y - paddingY - lineHeight;
         indicatorLines.forEach((line) => {
           ctx.page.drawText(line, {
@@ -323,13 +348,32 @@ const drawHeader = (yTop) => {
           cellX += colWidths[i];
         });
 
-        // row line
+        // ✅ horizontal line under row
         ctx.page.drawLine({
           start: { x: startX, y: y - rowHeight },
           end: { x: startX + tableWidth, y: y - rowHeight },
           thickness: 0.6,
           color: rgb(0, 0, 0),
         });
+
+        // ✅ vertical dividers for each column
+        let vx = startX;
+        ctx.page.drawLine({
+          start: { x: vx, y: y },
+          end: { x: vx, y: y - rowHeight },
+          thickness: 0.6,
+          color: rgb(0, 0, 0),
+        });
+        vx += indicatorWidth;
+        for (let i = 0; i < colWidths.length; i++) {
+          ctx.page.drawLine({
+            start: { x: vx, y: y },
+            end: { x: vx, y: y - rowHeight },
+            thickness: 0.6,
+            color: rgb(0, 0, 0),
+          });
+          vx += colWidths[i];
+        }
 
         y -= rowHeight;
       }
@@ -340,7 +384,6 @@ const drawHeader = (yTop) => {
     // === RENDER QUESTIONS ===
     for (const question of selectedQuestions) {
       if (question.type === 'footer') continue;
-
       if (question.type === 'table') {
         drawTable({ question });
         continue;
@@ -374,7 +417,6 @@ const drawHeader = (yTop) => {
         const lineY = ctx.y + 2;
         const dashLength = 6;
         const gap = 3;
-
         for (let x = lineStartX; x < lineEndX; x += dashLength + gap) {
           ctx.page.drawLine({
             start: { x, y: lineY },
@@ -439,7 +481,7 @@ const drawHeader = (yTop) => {
       );
     }
 
-    // === SAVE AND UPLOAD ===
+    // === SAVE & UPLOAD ===
     const pdfBytes = await pdfDoc.save();
     const token = (typeof getSessionToken === 'function' && getSessionToken()) || '';
     const session = JSON.parse(sessionStorage.getItem('session') || '{}');
