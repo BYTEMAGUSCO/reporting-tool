@@ -41,7 +41,7 @@ const RejectedAccountsTab = () => {
         const result = await getBarangays(token);
         setBarangays(result || []);
       } catch (err) {
-        // no need to console.error every time
+        // ignore fetch errors
       }
     };
     fetchBarangays();
@@ -105,7 +105,7 @@ const RejectedAccountsTab = () => {
           size="small"
           stickyHeader
           sx={{
-            minWidth: 1200,
+            minWidth: 1300,
             borderRadius: '0.5rem',
             '& thead': {
               backgroundColor: '#f5f7fa',
@@ -119,95 +119,115 @@ const RejectedAccountsTab = () => {
           }}
         >
           <TableHead>
-  <TableRow>
-    <TableCell><strong>Name</strong></TableCell>
-    <TableCell><strong>Email</strong></TableCell>
-    <TableCell><strong>Role</strong></TableCell>
-    <TableCell><strong>Phone</strong></TableCell>
-    <TableCell><strong>Barangay</strong></TableCell>
-    <TableCell><strong>Date</strong></TableCell>
-    <TableCell><strong>Remarks</strong></TableCell>
-    <TableCell><strong>Denied By</strong></TableCell>
-    <TableCell><strong>Status</strong></TableCell>
-  </TableRow>
-</TableHead>
+            <TableRow>
+              <TableCell><strong>Name</strong></TableCell>
+              <TableCell><strong>Email</strong></TableCell>
+              <TableCell><strong>Role</strong></TableCell>
+              <TableCell><strong>Phone</strong></TableCell>
+              <TableCell><strong>Barangay</strong></TableCell>
+              <TableCell><strong>Date</strong></TableCell>
+              <TableCell><strong>Remarks</strong></TableCell>
+              <TableCell><strong>Denied By</strong></TableCell>
+              {/* ✅ new column */}
+              <TableCell><strong>Reviewed At</strong></TableCell>
+              <TableCell><strong>Status</strong></TableCell>
+            </TableRow>
+          </TableHead>
 
-<TableBody>
-  {loading ? (
-    Array.from({ length: PAGE_LIMIT }).map((_, i) => (
-      <TableRow key={i}>
-        {Array(9).fill().map((_, j) => (
-          <TableCell key={j} sx={{ py: 0.5 }}>
-            <Skeleton variant="text" height={20} sx={{ borderRadius: '0.5rem' }} />
-          </TableCell>
-        ))}
-      </TableRow>
-    ))
-  ) : filteredSortedAccounts.length === 0 ? (
-    <TableRow>
-      <TableCell colSpan={9}>
-        <Typography variant="body2" align="center" sx={{ py: 2 }}>
-          No rejected accounts found.
-        </Typography>
-      </TableCell>
-    </TableRow>
-  ) : (
-    filteredSortedAccounts.map((acc, i) => (
-      <TableRow key={i} hover sx={{ borderRadius: '0.5rem' }}>
-        <TableCell>{acc.requester_name}</TableCell>
-        <TableCell>{acc.requester_email}</TableCell>
-        <TableCell>{acc.requester_role}</TableCell>
-        <TableCell>{acc.requester_phone}</TableCell>
-        <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
-        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-          {new Date(acc.created_at).toLocaleDateString()}
-        </TableCell>
-        <TableCell sx={{ maxWidth: 200 }}>
-          <Tooltip title={acc.remarks || 'No remarks provided'}>
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {acc.remarks || '—'}
-            </Typography>
-          </Tooltip>
-        </TableCell>
+          <TableBody>
+            {loading ? (
+              Array.from({ length: PAGE_LIMIT }).map((_, i) => (
+                <TableRow key={i}>
+                  {Array(10).fill().map((_, j) => (
+                    <TableCell key={j} sx={{ py: 0.5 }}>
+                      <Skeleton variant="text" height={20} sx={{ borderRadius: '0.5rem' }} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filteredSortedAccounts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10}>
+                  <Typography variant="body2" align="center" sx={{ py: 2 }}>
+                    No rejected accounts found.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredSortedAccounts.map((acc, i) => (
+                <TableRow key={i} hover sx={{ borderRadius: '0.5rem' }}>
+                  <TableCell>{acc.requester_name}</TableCell>
+                  <TableCell>{acc.requester_email}</TableCell>
+                  <TableCell>{acc.requester_role}</TableCell>
+                  <TableCell>{acc.requester_phone}</TableCell>
+                  <TableCell>{getBarangayName(acc.requester_barangay)}</TableCell>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    {new Date(acc.created_at).toLocaleDateString()}
+                  </TableCell>
 
-        {/* NEW: Denied By column */}
-        <TableCell sx={{ maxWidth: 180 }}>
-          <Tooltip title={acc.denied_by_email || 'Unknown'}>
-            <Typography
-              variant="body2"
-              noWrap
-              sx={{
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {acc.denied_by_email || '—'}
-            </Typography>
-          </Tooltip>
-        </TableCell>
+                  {/* Remarks */}
+                  <TableCell sx={{ maxWidth: 200 }}>
+                    <Tooltip title={acc.remarks || 'No remarks provided'}>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {acc.remarks || '—'}
+                      </Typography>
+                    </Tooltip>
+                  </TableCell>
 
-        <TableCell>
-          <Chip
-            label="Rejected"
-            color="error"
-            size="small"
-            sx={{ fontSize: '0.7rem', height: '22px', borderRadius: '0.5rem' }}
-          />
-        </TableCell>
-      </TableRow>
-    ))
-  )}
-</TableBody>
+                  {/* Denied By */}
+                  <TableCell sx={{ maxWidth: 180 }}>
+                    <Tooltip title={acc.denied_by_email || 'Unknown'}>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          textOverflow: 'ellipsis',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {acc.denied_by_email || '—'}
+                      </Typography>
+                    </Tooltip>
+                  </TableCell>
 
+                  {/* ✅ Reviewed At */}
+                  <TableCell
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      color: acc.reviewed_at ? 'inherit' : 'gray',
+                      fontStyle: acc.reviewed_at ? 'normal' : 'italic',
+                    }}
+                  >
+                    {acc.reviewed_at
+                      ? new Date(acc.reviewed_at).toLocaleString()
+                      : 'Not yet reviewed'}
+                  </TableCell>
+
+                  <TableCell>
+                    <Chip
+                      label="Rejected"
+                      color="error"
+                      size="small"
+                      sx={{
+                        fontSize: '0.7rem',
+                        height: '22px',
+                        borderRadius: '0.5rem',
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
         </Table>
       </Box>
 

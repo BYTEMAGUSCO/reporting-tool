@@ -59,9 +59,12 @@ const ReportsTable = ({
               <StyledTableCell>Report Name</StyledTableCell>
               <StyledTableCell>Submitted On</StyledTableCell>
               {(activeTab === 1 || activeTab === 2) && (
-                <StyledTableCell>
-                  {activeTab === 1 ? 'Approved By' : 'Denied By'}
-                </StyledTableCell>
+                <>
+                  <StyledTableCell>
+                    {activeTab === 1 ? 'Approved By' : 'Denied By'}
+                  </StyledTableCell>
+                  <StyledTableCell>Reviewed At</StyledTableCell>
+                </>
               )}
               {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
               <StyledTableCell align="right">Actions</StyledTableCell>
@@ -73,7 +76,10 @@ const ReportsTable = ({
                 <TableCell><Skeleton variant="text" width={150} /></TableCell>
                 <TableCell><Skeleton variant="text" width={120} /></TableCell>
                 {(activeTab === 1 || activeTab === 2) && (
-                  <TableCell><Skeleton variant="text" width={180} /></TableCell>
+                  <>
+                    <TableCell><Skeleton variant="text" width={180} /></TableCell>
+                    <TableCell><Skeleton variant="text" width={140} /></TableCell>
+                  </>
                 )}
                 {activeTab === 2 && (
                   <TableCell><Skeleton variant="text" width={180} /></TableCell>
@@ -101,9 +107,12 @@ const ReportsTable = ({
             <StyledTableCell>Report Name</StyledTableCell>
             <StyledTableCell>Submitted On</StyledTableCell>
             {(activeTab === 1 || activeTab === 2) && (
-              <StyledTableCell>
-                {activeTab === 1 ? 'Approved By' : 'Denied By'}
-              </StyledTableCell>
+              <>
+                <StyledTableCell>
+                  {activeTab === 1 ? 'Approved By' : 'Denied By'}
+                </StyledTableCell>
+                <StyledTableCell>Reviewed At</StyledTableCell>
+              </>
             )}
             {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
             <StyledTableCell align="right">Actions</StyledTableCell>
@@ -116,9 +125,9 @@ const ReportsTable = ({
               <TableCell
                 colSpan={
                   activeTab === 2
-                    ? 5
+                    ? 6
                     : activeTab === 1
-                    ? 4
+                    ? 5
                     : 3
                 }
                 align="center"
@@ -136,19 +145,40 @@ const ReportsTable = ({
                 </TableCell>
 
                 {(activeTab === 1 || activeTab === 2) && (
-                  <TableCell
-                    sx={{
-                      whiteSpace: 'normal',
-                      maxWidth: 300,
-                      wordBreak: 'break-word',
-                      color: report.approved_by || report.denied_by ? 'inherit' : 'gray',
-                      fontStyle: report.approved_by || report.denied_by ? 'normal' : 'italic',
-                    }}
-                  >
-                    {activeTab === 1
-                      ? report.approved_by || 'No approver email'
-                      : report.denied_by || 'No denier email'}
-                  </TableCell>
+                  <>
+                    <TableCell
+                      sx={{
+                        whiteSpace: 'normal',
+                        maxWidth: 300,
+                        wordBreak: 'break-word',
+                        color:
+                          report.approved_by || report.denied_by
+                            ? 'inherit'
+                            : 'gray',
+                        fontStyle:
+                          report.approved_by || report.denied_by
+                            ? 'normal'
+                            : 'italic',
+                      }}
+                    >
+                      {activeTab === 1
+                        ? report.approved_by || 'No approver email'
+                        : report.denied_by || 'No denier email'}
+                    </TableCell>
+
+                    {/* ✅ New Reviewed At Column */}
+                    <TableCell
+                      sx={{
+                        whiteSpace: 'nowrap',
+                        color: report.reviewed_at ? 'inherit' : 'gray',
+                        fontStyle: report.reviewed_at ? 'normal' : 'italic',
+                      }}
+                    >
+                      {report.reviewed_at
+                        ? new Date(report.reviewed_at).toLocaleString()
+                        : 'Not yet reviewed'}
+                    </TableCell>
+                  </>
                 )}
 
                 {activeTab === 2 && (

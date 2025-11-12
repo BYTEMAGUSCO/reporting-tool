@@ -42,7 +42,7 @@ const ApprovedAccountsTab = () => {
 
   useEffect(() => {
     if (data?.data) {
-      console.log("[📥 Approved Accounts Raw Data]", data.data);
+      console.log('[📥 Approved Accounts Raw Data]', data.data);
     }
   }, [data]);
 
@@ -81,7 +81,7 @@ const ApprovedAccountsTab = () => {
     }
 
     allAccounts = allAccounts.filter(
-      (acc) => acc.request_status === "A" && acc.raw_user_meta_data?.status !== "D"
+      (acc) => acc.request_status === 'A' && acc.raw_user_meta_data?.status !== 'D'
     );
 
     allAccounts.sort((a, b) => {
@@ -97,34 +97,36 @@ const ApprovedAccountsTab = () => {
   const handleDeactivate = async (acc) => {
     setDeactivating(acc.requester_email);
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-status/deactivate-email/${encodeURIComponent(acc.requester_email)}`;
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-status/deactivate-email/${encodeURIComponent(
+        acc.requester_email
+      )}`;
 
       const res = await fetch(url, {
-        method: "PATCH",
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
       const text = await res.text();
-      console.log("[📦 Raw response]", text);
+      console.log('[📦 Raw response]', text);
 
       let data;
       try {
         data = JSON.parse(text);
       } catch {
-        throw new Error("Response is not JSON — maybe HTML error page?");
+        throw new Error('Response is not JSON — maybe HTML error page?');
       }
 
       if (res.ok) {
-        console.log("[✅ Deactivate Success]", data);
+        console.log('[✅ Deactivate Success]', data);
         refetch();
       } else {
-        console.error("[❌ Deactivate Error]", data);
+        console.error('[❌ Deactivate Error]', data);
       }
     } catch (err) {
-      console.error("[❌ Deactivate Exception]", err);
+      console.error('[❌ Deactivate Exception]', err);
     } finally {
       setDeactivating(null);
     }
@@ -149,7 +151,7 @@ const ApprovedAccountsTab = () => {
           borderRadius: '0.5rem',
         }}
       >
-        <Table size="small" stickyHeader sx={{ minWidth: 1100 }}>
+        <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
           <TableHead sx={{ backgroundColor: '#f5f7fa' }}>
             <TableRow>
               <TableCell><strong>Name</strong></TableCell>
@@ -159,26 +161,29 @@ const ApprovedAccountsTab = () => {
               <TableCell><strong>Barangay</strong></TableCell>
               <TableCell><strong>Date</strong></TableCell>
               <TableCell><strong>Approved By</strong></TableCell>
+              {/* ✅ New column */}
+              <TableCell><strong>Reviewed At</strong></TableCell>
               <TableCell><strong>Status</strong></TableCell>
-              {role === "S" && (
-                <TableCell><strong>Actions</strong></TableCell>
-              )}
+              {role === 'S' && <TableCell><strong>Actions</strong></TableCell>}
             </TableRow>
           </TableHead>
+
           <TableBody>
             {loading ? (
               Array.from({ length: PAGE_LIMIT }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array(role === "S" ? 9 : 8).fill().map((_, j) => (
-                    <TableCell key={j} sx={{ py: 0.5 }}>
-                      <Skeleton variant="text" height={20} />
-                    </TableCell>
-                  ))}
+                  {Array(role === 'S' ? 10 : 9)
+                    .fill()
+                    .map((_, j) => (
+                      <TableCell key={j} sx={{ py: 0.5 }}>
+                        <Skeleton variant="text" height={20} />
+                      </TableCell>
+                    ))}
                 </TableRow>
               ))
             ) : filteredSortedAccounts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={role === "S" ? 9 : 8}>
+                <TableCell colSpan={role === 'S' ? 10 : 9}>
                   <Typography variant="body2" align="center" sx={{ py: 2 }}>
                     No approved accounts found.
                   </Typography>
@@ -196,6 +201,20 @@ const ApprovedAccountsTab = () => {
                     {new Date(acc.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>{acc.approved_by_email || '—'}</TableCell>
+
+                  {/* ✅ Reviewed At column */}
+                  <TableCell
+                    sx={{
+                      whiteSpace: 'nowrap',
+                      color: acc.reviewed_at ? 'inherit' : 'gray',
+                      fontStyle: acc.reviewed_at ? 'normal' : 'italic',
+                    }}
+                  >
+                    {acc.reviewed_at
+                      ? new Date(acc.reviewed_at).toLocaleString()
+                      : 'Not yet reviewed'}
+                  </TableCell>
+
                   <TableCell>
                     <Chip
                       label="Approved"
@@ -208,7 +227,8 @@ const ApprovedAccountsTab = () => {
                       }}
                     />
                   </TableCell>
-                  {role === "S" && (
+
+                  {role === 'S' && (
                     <TableCell>
                       <Tooltip title="Deactivate Account">
                         <span>
