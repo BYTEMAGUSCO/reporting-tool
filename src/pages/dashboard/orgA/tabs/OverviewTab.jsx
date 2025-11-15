@@ -97,7 +97,7 @@ const OverviewTab = () => {
         else if (role === 'S') roleLabel = 'Super Admin';
 
         const match = barangayList.find((b) => b.id === barangayId);
-        const fullName = match ? `${match.name} (District ${match.district_number})` : barangayId;
+        const fullName = match ? `${match.name}` : barangayId;
 
         setBarangayName(fullName);
         setRoleName(roleLabel);
@@ -144,10 +144,11 @@ const OverviewTab = () => {
           }}
         >
           <Typography variant="h4" gutterBottom fontWeight="bold">
-            Welcome back, {user.name || 'stranger'}!
+            Welcome, {user.name ? user.name : 'Guest'} 👋
           </Typography>
+
           <Typography variant="body1" sx={{ opacity: 0.9 }}>
-            You are logged in as <strong>{roleName}</strong>
+            Logged in as <strong>{roleName}</strong>
             {barangayName !== 'Not provided' ? ` • ${barangayName}` : ''}
           </Typography>
         </Box>

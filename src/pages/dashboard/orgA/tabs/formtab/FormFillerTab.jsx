@@ -131,12 +131,15 @@ const handleFormSubmit = async (formJSON) => {
   await generateReportPDF({
     selectedQuestions,
     formJSON,
+    answers,              // ❤️ also include answers!
+    form_id: selectedFormId,   // ⭐ ADD THIS
     forms,
     selectedFormId,
     getSessionToken,
     getBarangayNameFromSession,
   });
 };
+
 
   return (
     <Box sx={{ height: '100vh', p: 2 }}>

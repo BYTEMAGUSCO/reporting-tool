@@ -87,27 +87,55 @@ const ViewReportsTabFilteredByBarangay = () => {
     setUserRole(session?.user?.user_metadata?.role || null);
   }, []);
 
-  // ✅ Fetch ALL reports ONCE
   useEffect(() => {
-    if (!userRole) return;
-    const fetchReports = async () => {
-      setLoading(true);
-      try {
-        const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        const json = await res.json();
-        setAllReports(json.data || []);
-      } catch (err) {
-        console.error('Failed to load reports:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchReports();
-  }, [userRole]);
+  if (!userRole) return;
+
+  const fetchReports = async () => {
+    setLoading(true);
+
+    try {
+      const session = JSON.parse(sessionStorage.getItem("session"));
+      const token = session?.access_token ?? "";
+      const userId = session?.user?.id ?? "";
+
+      // 1️⃣ Fetch ALL forms first
+      const formsRes = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const formsJson = await formsRes.json();
+      const allForms = formsJson.data || [];
+
+      const formOwnerMap = {};
+      allForms.forEach(f => formOwnerMap[f.form_id] = f.added_by);
+
+      // 2️⃣ Fetch ALL reports
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const json = await res.json();
+      const raw = json.data || [];
+
+      // 3️⃣ Only keep reports whose form belongs to THIS USER
+      const ownerReports = raw.filter(r => formOwnerMap[r.form_id] === userId);
+
+      console.log("📌 Reports that belong to THIS USER:", ownerReports);
+
+      setAllReports(ownerReports);
+
+    } catch (err) {
+      console.error("Failed to load reports:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchReports();
+}, [userRole]);
+
 
   // ✅ Fetch barangays
   useEffect(() => {
@@ -145,13 +173,27 @@ const ViewReportsTabFilteredByBarangay = () => {
     setPage(1);
   }, [allReports, selectedBarangay, activeTab, userRole, userBarangay]);
 
-  // ✅ Counters (always based on full dataset)
-  useEffect(() => {
-    const approved = allReports.filter((r) => r.report_status === 'A').length;
-    const pending = allReports.filter((r) => r.report_status === 'P').length;
-    const rejected = allReports.filter((r) => r.report_status === 'D').length;
-    setCounts({ approved, pending, rejected });
-  }, [allReports]);
+// ✅ Counters update based on selected barangay + user role
+useEffect(() => {
+  let data = [...allReports];
+
+  // Super Admin or DILG can filter by barangay dropdown
+  if (userRole === "S" || userRole === "D") {
+    if (selectedBarangay !== "All") {
+      data = data.filter(r => String(r.barangay) === String(selectedBarangay));
+    }
+  } else {
+    // Barangay users only see their own records
+    data = data.filter(r => String(r.barangay) === String(userBarangay));
+  }
+
+  const approved = data.filter(r => r.report_status === "A").length;
+  const pending  = data.filter(r => r.report_status === "P").length;
+  const rejected = data.filter(r => r.report_status === "D").length;
+
+  setCounts({ approved, pending, rejected });
+}, [allReports, selectedBarangay, userRole, userBarangay]);
+
 
   // ✅ Paginate filtered results
   useEffect(() => {

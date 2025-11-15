@@ -11,7 +11,15 @@ import {
   RadioGroup,
 } from '@mui/material';
 
-const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
+const QuestionRenderer = ({
+  q,
+  mode,
+  answers,
+  setAnswers,
+  required = false,
+  error = false,
+  helperText = '',
+}) => {
   const isDisabled = mode !== 'submit';
 
   const handleChange = (e) => {
@@ -49,6 +57,9 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
         {q.label}
       </Typography>
 
+      {/* =============================
+          TEXT
+      ============================= */}
       {q.type === 'text' && (
         <TextField
           fullWidth
@@ -57,9 +68,15 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
           disabled={isDisabled}
           value={answers?.[q.id] ?? ''}
           onChange={handleChange}
+          required={required}
+          error={error}
+          helperText={helperText}
         />
       )}
 
+      {/* =============================
+          TEXTAREA
+      ============================= */}
       {q.type === 'textarea' && (
         <TextField
           fullWidth
@@ -70,9 +87,15 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
           disabled={isDisabled}
           value={answers?.[q.id] ?? ''}
           onChange={handleChange}
+          required={required}
+          error={error}
+          helperText={helperText}
         />
       )}
 
+      {/* =============================
+          NUMBER
+      ============================= */}
       {q.type === 'number' && (
         <TextField
           fullWidth
@@ -82,9 +105,15 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
           disabled={isDisabled}
           value={answers?.[q.id] ?? ''}
           onChange={handleChange}
+          required={required}
+          error={error}
+          helperText={helperText}
         />
       )}
 
+      {/* =============================
+          EMAIL
+      ============================= */}
       {q.type === 'email' && (
         <TextField
           fullWidth
@@ -94,9 +123,15 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
           disabled={isDisabled}
           value={answers?.[q.id] ?? ''}
           onChange={handleChange}
+          required={required}
+          error={error}
+          helperText={helperText}
         />
       )}
 
+      {/* =============================
+          DATE
+      ============================= */}
       {q.type === 'date' && (
         <TextField
           fullWidth
@@ -106,14 +141,22 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
           value={answers?.[q.id] ?? ''}
           onChange={handleChange}
           InputLabelProps={{ shrink: true }}
+          required={required}
+          error={error}
+          helperText={helperText}
         />
       )}
 
+      {/* =============================
+          DROPDOWN
+      ============================= */}
       {q.type === 'dropdown' && (
         <FormControl fullWidth variant="standard" disabled={isDisabled}>
           <Select
             value={answers?.[q.id] ?? ''}
             onChange={handleChange}
+            required={required}
+            error={error}
           >
             {q.options.map((opt, i) => (
               <MenuItem key={i} value={opt}>
@@ -121,9 +164,20 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
               </MenuItem>
             ))}
           </Select>
+          {helperText && (
+            <Typography
+              variant="caption"
+              color={error ? 'error' : 'textSecondary'}
+            >
+              {helperText}
+            </Typography>
+          )}
         </FormControl>
       )}
 
+      {/* =============================
+          CHECKBOX
+      ============================= */}
       {q.type === 'checkbox' && (
         <Box display="flex" flexDirection="column" mt={1}>
           {q.options.map((opt, i) => (
@@ -140,11 +194,19 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
               sx={{ mb: 0.5 }}
             />
           ))}
+          {helperText && error && (
+            <Typography variant="caption" color="error">
+              {helperText}
+            </Typography>
+          )}
         </Box>
       )}
 
+      {/* =============================
+          MULTIPLE CHOICE (RADIO)
+      ============================= */}
       {q.type === 'multiple_choice' && (
-        <FormControl component="fieldset" disabled={isDisabled}>
+        <FormControl component="fieldset" disabled={isDisabled} error={error}>
           <RadioGroup
             name={q.id}
             value={answers?.[q.id] ?? ''}
@@ -160,6 +222,12 @@ const QuestionRenderer = ({ q, mode, answers, setAnswers }) => {
               />
             ))}
           </RadioGroup>
+
+          {helperText && error && (
+            <Typography variant="caption" color="error">
+              {helperText}
+            </Typography>
+          )}
         </FormControl>
       )}
     </Box>

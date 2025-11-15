@@ -1,4 +1,10 @@
-import { Box, IconButton, Button, CircularProgress, Typography } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Button,
+  CircularProgress,
+  Typography,
+} from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import QuestionRenderer from './QuestionRenderer';
 import QuestionEditor from './QuestionEditor';
@@ -7,7 +13,7 @@ import { useEffect, useState } from 'react';
 
 const FormPreviewRenderer = ({
   questions,
-  mode = 'edit', // 'edit' | 'preview' | 'submit'
+  mode = 'edit',
   deleteQuestion,
   updateQuestion,
   updateOption,
@@ -43,27 +49,79 @@ const FormPreviewRenderer = ({
     try {
       await deleteQuestion(id);
     } finally {
-      setLoadingButtons((prev) => ({ ...prev, [`delete_${id}`]: false }));
+      setLoadingButtons((prev) => ({
+        ...prev,
+        [`delete_${id}`]: false,
+      }));
     }
   };
 
   const handleSubmit = async () => {
     setLoadingButtons((prev) => ({ ...prev, submit: true }));
+
     const formJSON = {
       submittedAt: new Date().toISOString(),
       answers: formAnswers,
     };
+
     try {
       if (onSubmit) await onSubmit(formJSON);
-      else console.log('Form submitted!', formJSON);
     } finally {
       setLoadingButtons((prev) => ({ ...prev, submit: false }));
     }
   };
 
-  // ==========================================
-  // 🔥 MAIN RENDERER LOGIC
-  // ==========================================
+  // ============================================================
+  // 🔥 VALIDATION — Excel required columns must NOT be empty
+  // ============================================================
+  const hasEmptyRequiredExcelCells = () => {
+    for (const q of questions) {
+      if (q.type !== 'table') continue;
+
+      const table = formAnswers[q.id] || {};
+      const rows = q.config.rows || [];
+      const columns = q.config.columns || [];
+
+      for (let r = 0; r < rows.length; r++) {
+        for (const col of columns) {
+          if (col.editable === false) continue; // skip non-editable fields
+          const value = table?.[r]?.[col.key] ?? '';
+          if (!value || String(value).trim() === '') return true;
+        }
+      }
+    }
+    return false;
+  };
+
+  // ============================================================
+  // 🔥 VALIDATION — ALL normal fields must have answers
+  // ============================================================
+  const hasEmptyRequiredNormalFields = () => {
+    for (const q of questions) {
+      if (
+        q.type === 'footer' ||
+        q.type === 'text_block' ||
+        q.type === 'table'
+      )
+        continue;
+
+      const value = formAnswers[q.id];
+
+      // checkbox array required
+      if (q.type === 'checkbox') {
+        if (!value || value.length === 0) return true;
+        continue;
+      }
+
+      // all other fields
+      if (!value || String(value).trim() === '') return true;
+    }
+    return false;
+  };
+
+  // ============================================================
+  // 🔥 MAIN RENDER
+  // ============================================================
   return (
     <Box>
       {questions.map((q) => (
@@ -111,7 +169,9 @@ const FormPreviewRenderer = ({
                   toggleColumnEditable={toggleColumnEditable}
                   updateColumnLabel={(id, colIndex, newLabel) => {
                     const updatedColumns = q.config.columns.map((col, i) =>
-                      i === colIndex ? { ...col, label: newLabel } : col
+                      i === colIndex
+                        ? { ...col, label: newLabel }
+                        : col
                     );
                     updateQuestion(id, 'config', {
                       ...q.config,
@@ -136,96 +196,6 @@ const FormPreviewRenderer = ({
                     updateQuestion(id, 'label', newLabel)
                   }
                 />
-              ) : q.type === 'footer' ? (
-                // 🟣 Footer Section — Editable Version
-                <>
-                  <QuestionEditor
-                    q={q}
-                    updateQuestion={updateQuestion}
-                    updateOption={updateOption}
-                    addOption={addOption}
-                    removeOption={removeOption}
-                  />
-
-                  {/* Optional Live Preview Below the Editor */}
-                  <Box
-                    textAlign="center"
-                    p={2}
-                    mt={2}
-                    border="1px dashed #aaa"
-                    borderRadius={2}
-                    bgcolor="#fafafa"
-                  >
-                    <Typography
-                      variant="subtitle1"
-                      fontWeight="bold"
-                      gutterBottom
-                      sx={{ color: '#444' }}
-                    >
-                      Live Footer Preview
-                    </Typography>
-
-                    <Box
-                      display="flex"
-                      justifyContent="space-between"
-                      mt={3}
-                      mb={2}
-                      px={5}
-                    >
-                      <Box>
-                        <Typography fontSize={13}>
-                          {q.config.preparedByLabel || 'Prepared by'}:
-                        </Typography>
-                        <Typography
-                          sx={{
-                            textDecoration: 'underline',
-                            minWidth: 160,
-                            height: 18,
-                          }}
-                        >
-                          &nbsp;
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {q.config.preparedByRole || 'Role'} (Signature over Printed Name)
-                        </Typography>
-                      </Box>
-
-                      <Box>
-                        <Typography fontSize={13}>
-                          {q.config.submittedByLabel || 'Submitted by'}:
-                        </Typography>
-                        <Typography
-                          sx={{
-                            textDecoration: 'underline',
-                            minWidth: 160,
-                            height: 18,
-                          }}
-                        >
-                          &nbsp;
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {q.config.submittedByRole || 'Role'} (Signature over Printed Name)
-                        </Typography>
-                      </Box>
-                    </Box>
-
-                    {q.config.showDate && (
-                      <Typography fontSize={13} mt={2}>
-                        Date Accomplished: ______________________
-                      </Typography>
-                    )}
-
-                    <Typography
-                      variant="caption"
-                      mt={1}
-                      color="text.secondary"
-                      fontStyle="italic"
-                    >
-                      {q.config.noteText ||
-                        'Note: This form is generated and submitted through the Barangay Management System (BMS).'}
-                    </Typography>
-                  </Box>
-                </>
               ) : (
                 <QuestionEditor
                   q={q}
@@ -255,42 +225,19 @@ const FormPreviewRenderer = ({
                   <Typography fontWeight="bold" mb={1}>
                     {q.label || 'Footer Section'}
                   </Typography>
-
-                  <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    mt={2}
-                    mb={2}
-                    px={5}
-                  >
-                    <Box>
-                      <Typography fontSize={13}>{q.config.preparedByLabel}</Typography>
-                      <Typography sx={{ textDecoration: 'underline', minWidth: 160 }}>
-                        &nbsp;
-                      </Typography>
-                      <Typography variant="caption">
-                        {q.config.preparedByRole}
-                      </Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography fontSize={13}>{q.config.submittedByLabel}</Typography>
-                      <Typography sx={{ textDecoration: 'underline', minWidth: 160 }}>
-                        &nbsp;
-                      </Typography>
-                      <Typography variant="caption">
-                        {q.config.submittedByRole}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {q.config.showDate && (
-                    <Typography fontSize={13}>
-                      Date Accomplished: ______________________
-                    </Typography>
-                  )}
                   <Typography variant="caption" mt={1} color="text.secondary">
                     {q.config.noteText}
+                  </Typography>
+                </Box>
+              ) : q.type === 'text_block' ? (
+                <Box mt={1}>
+                  <Typography
+                    sx={{
+                      textAlign: q.config.alignment || 'left',
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {q.config.text}
                   </Typography>
                 </Box>
               ) : (
@@ -320,6 +267,17 @@ const FormPreviewRenderer = ({
                     {q.config.noteText}
                   </Typography>
                 </Box>
+              ) : q.type === 'text_block' ? (
+                <Box mt={1}>
+                  <Typography
+                    sx={{
+                      textAlign: q.config.alignment,
+                      whiteSpace: 'pre-wrap',
+                    }}
+                  >
+                    {q.config.text}
+                  </Typography>
+                </Box>
               ) : (
                 <QuestionRenderer
                   q={q}
@@ -327,6 +285,17 @@ const FormPreviewRenderer = ({
                   answers={formAnswers}
                   setAnswers={setFormAnswers}
                   onAnswerChange={handleAnswerChange}
+                  required
+                  error={
+                    !formAnswers[q.id] ||
+                    String(formAnswers[q.id]).trim() === ''
+                  }
+                  helperText={
+                    !formAnswers[q.id] ||
+                    String(formAnswers[q.id]).trim() === ''
+                      ? 'This field is required'
+                      : ''
+                  }
                 />
               )}
             </>
@@ -343,9 +312,15 @@ const FormPreviewRenderer = ({
             variant="contained"
             color="primary"
             onClick={handleSubmit}
-            disabled={Object.keys(formAnswers).length < 1 || loadingButtons.submit}
+            disabled={
+              loadingButtons.submit ||
+              hasEmptyRequiredNormalFields() ||
+              hasEmptyRequiredExcelCells()
+            }
             startIcon={
-              loadingButtons.submit && <CircularProgress size={18} color="inherit" />
+              loadingButtons.submit && (
+                <CircularProgress size={18} color="inherit" />
+              )
             }
           >
             {loadingButtons.submit ? 'Submitting...' : 'Submit Form'}

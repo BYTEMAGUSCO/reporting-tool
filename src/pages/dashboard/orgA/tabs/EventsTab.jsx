@@ -38,6 +38,7 @@ const EventsTab = () => {
 
   const [page, setPage] = useState(1);
   const [events, setEvents] = useState([]);
+  const [attendance, setAttendance] = useState([]);     // ⭐ NEW
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
 
@@ -67,7 +68,6 @@ const EventsTab = () => {
       if (fetchedUser) {
         const metadata = fetchedUser.user_metadata || {};
         const role = metadata.role || fetchedUser.role || "unknown";
-        console.log("[EventsTab] Detected user role:", role);
         setUserRole(role);
       }
     } catch (err) {
@@ -77,6 +77,7 @@ const EventsTab = () => {
 
   useEffect(() => {
     fetchEvents(page);
+    fetchAttendance();       // ⭐ NEW
     fetchBarangays();
   }, [page]);
 
@@ -90,6 +91,27 @@ const EventsTab = () => {
     }
   };
 
+  // ⭐ NEW — Fetch all event attendance
+  const fetchAttendance = async () => {
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/event-attendance`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        console.error("[Attendance] API Error:", json.error);
+        return;
+      }
+
+      setAttendance(Array.isArray(json.data) ? json.data : []);
+    } catch (err) {
+      console.error("[Attendance] Fetch error:", err);
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
 
@@ -100,9 +122,7 @@ const EventsTab = () => {
         { event: "*", schema: "public", table: "events" },
         async () => fetchEvents(page)
       )
-      .subscribe((status) => {
-        if (status === "SUBSCRIBED") console.log("🔥 Supabase realtime listener for events started!");
-      });
+      .subscribe();
 
     return () => supabase.removeChannel(channel);
   }, [token, page]);
@@ -119,11 +139,9 @@ const EventsTab = () => {
         setEvents(Array.isArray(data.data) ? data.data : []);
         setTotalPages(Math.ceil((data.total || 0) / PAGE_LIMIT));
       } else {
-        console.error("[EventsTab] API Error:", data.error);
         await showErrorAlert(data.error || "Failed to fetch events");
       }
     } catch (err) {
-      console.error("[EventsTab] Fetch error:", err);
       await showErrorAlert("Network error while fetching events");
     } finally {
       setLoading(false);
@@ -145,7 +163,6 @@ const EventsTab = () => {
       await showSuccessAlert("Event approved! 🎉");
       fetchEvents(page);
     } catch (error) {
-      console.error("Approve failed:", error);
       await showErrorAlert(`Approve failed: ${error.message}`);
     } finally {
       setApprovingId(null);
@@ -158,23 +175,16 @@ const EventsTab = () => {
       const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/events/deny/${id}`;
       const res = await fetch(baseUrl, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`,  "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({ remarks: remarks || "" }),
       });
       if (!res.ok) {
-        let errMessage = "Failed to deny event";
-        try {
-          const errJson = await res.clone().json();
-          errMessage = errJson.error || JSON.stringify(errJson) || errMessage;
-        } catch {
-          errMessage = `HTTP ${res.status} — Could not parse error details`;
-        }
-        throw new Error(errMessage);
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || "Failed to deny event");
       }
       await showSuccessAlert("Event denied!");
       fetchEvents(page);
     } catch (error) {
-      console.error("Deny failed:", error);
       await showErrorAlert(`Deny failed: ${error.message}`);
     } finally {
       setDenyingId(null);
@@ -226,11 +236,12 @@ const EventsTab = () => {
       }
 
       setOpenAdd(false);
-      setNewEvent({ name: "", description: "", dateStart: "", dateEnd: "", location: "", barangay: "" });
+      setNewEvent({
+        name: "", description: "", dateStart: "", dateEnd: "", location: "", barangay: ""
+      });
       await showSuccessAlert("Event added! 🎉");
       fetchEvents(page);
     } catch (error) {
-      console.error("Add event failed:", error);
       await showErrorAlert(`Add event failed: ${error.message}`);
     } finally {
       setAddingEvent(false);
@@ -249,38 +260,35 @@ const EventsTab = () => {
       </Typography>
 
       <Box mb={2}>
-        {/* Only render Add Event button if user is NOT Super Admin */}
         {userRole !== "S" && (
-<Button
-  onClick={() => setOpenAdd(true)}
-  disabled={loading || addingEvent}
-  sx={{
-    bgcolor: getRoleButtonColor(userRole) + " !important",
-    color: "#fff",
-    fontWeight: "bold",
-    px: 3,
-    py: 1.2,
-    border: "2px solid rgba(0,0,0,0.15)",
-    borderRadius: "8px",
-    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-    textTransform: "none",
-    transition: "all 0.2s ease",
-    '&:hover': {
-      bgcolor: getRoleButtonColor(userRole) + " !important",
-      opacity: 0.9,
-      boxShadow: "0 6px 10px rgba(0,0,0,0.15)",
-    },
-    '&:disabled': {
-      bgcolor: "#cbd5e1 !important",
-      color: "#64748b",
-      boxShadow: "none",
-    },
-  }}
->
-  Add Event
-</Button>
-
-
+          <Button
+            onClick={() => setOpenAdd(true)}
+            disabled={loading || addingEvent}
+            sx={{
+              bgcolor: getRoleButtonColor(userRole) + " !important",
+              color: "#fff",
+              fontWeight: "bold",
+              px: 3,
+              py: 1.2,
+              border: "2px solid rgba(0,0,0,0.15)",
+              borderRadius: "8px",
+              boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
+              textTransform: "none",
+              transition: "all 0.2s ease",
+              '&:hover': {
+                bgcolor: getRoleButtonColor(userRole) + " !important",
+                opacity: 0.9,
+                boxShadow: "0 6px 10px rgba(0,0,0,0.15)",
+              },
+              '&:disabled': {
+                bgcolor: "#cbd5e1 !important",
+                color: "#64748b",
+                boxShadow: "none",
+              },
+            }}
+          >
+            Add Event
+          </Button>
         )}
       </Box>
 
@@ -288,7 +296,10 @@ const EventsTab = () => {
 
       <Box sx={{ overflowX: "auto", maxHeight: "60vh", overflowY: "auto", borderRadius: "0.5rem" }}>
         <EventsTable
-          events={events}
+          events={events.map(ev => ({
+            ...ev,
+            attendance: attendance.filter(a => a.event_id === ev.id)   // ⭐ MERGED HERE
+          }))}
           barangayList={barangayList}
           loading={loading}
           PAGE_LIMIT={PAGE_LIMIT}

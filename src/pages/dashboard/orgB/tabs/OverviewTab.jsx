@@ -23,7 +23,7 @@ const getRoleTheme = (role) => {
   };
 
   switch (role) {
-    case 'S': // Super Admin → Yellow
+    case 'S':
       return createTheme({
         palette: {
           ...base,
@@ -32,7 +32,8 @@ const getRoleTheme = (role) => {
         },
         customGradient: 'linear-gradient(135deg, #facc15, #fef08a)',
       });
-    case 'D': // DILG → Green
+
+    case 'D':
       return createTheme({
         palette: {
           ...base,
@@ -41,7 +42,8 @@ const getRoleTheme = (role) => {
         },
         customGradient: 'linear-gradient(135deg, #059669, #10b981)',
       });
-    case 'B': // Barangay → Blue
+
+    case 'B':
       return createTheme({
         palette: {
           ...base,
@@ -50,6 +52,7 @@ const getRoleTheme = (role) => {
         },
         customGradient: 'linear-gradient(135deg, #2563eb, #3b82f6)',
       });
+
     default:
       return createTheme({
         palette: {
@@ -135,6 +138,8 @@ const OverviewTab = () => {
   return (
     <ThemeProvider theme={roleTheme}>
       <Box sx={{ px: 3, py: 4 }}>
+
+        {/* 🌈 Gradient Welcome Banner */}
         <Box
           sx={{
             background: roleTheme.customGradient,
@@ -147,14 +152,29 @@ const OverviewTab = () => {
           }}
         >
           <Typography variant="h4" gutterBottom fontWeight="bold">
-            Welcome back, {user.name || 'stranger'}!
+            Welcome, {user.name ? user.name : "Guest"} 👋
           </Typography>
-          <Typography variant="body1" sx={{ opacity: 0.9 }}>
-            You are logged in as <strong>{roleName}</strong>
-            {barangayName !== 'Not provided' ? ` • ${barangayName}` : ''}
+
+          <Typography variant="body1" sx={{ opacity: 0.95, fontSize: '1.05rem' }}>
+            <strong>{roleName}</strong> • {barangayName}
+          </Typography>
+
+          <Typography
+            variant="body2"
+            sx={{ opacity: 0.85, mt: 1, fontSize: '0.9rem' }}
+          >
+            {user.email}
+          </Typography>
+
+          <Typography
+            variant="body2"
+            sx={{ opacity: 0.85, fontSize: '0.9rem' }}
+          >
+            Mobile: {user.phone}
           </Typography>
         </Box>
 
+        {/* Profile Card */}
         <Paper
           elevation={3}
           sx={{
@@ -178,6 +198,7 @@ const OverviewTab = () => {
 
         <Divider sx={{ mb: 4 }} />
 
+        {/* News Section */}
         <Typography variant="h5" gutterBottom fontWeight="medium">
           Latest News
         </Typography>

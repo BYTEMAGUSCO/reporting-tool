@@ -1,4 +1,13 @@
-import { Box, TextField, Typography, Divider, Switch, FormControlLabel } from '@mui/material';
+import {
+  Box,
+  TextField,
+  Typography,
+  Divider,
+  Switch,
+  FormControlLabel,
+  ButtonGroup,
+  Button,
+} from '@mui/material';
 
 const QuestionEditor = ({
   q,
@@ -20,7 +29,7 @@ const QuestionEditor = ({
     });
   };
 
-  // 🎯 Handle footer fields separately
+  // 🟣 FOOTER EDITOR
   if (q.type === 'footer') {
     return (
       <Box>
@@ -90,7 +99,54 @@ const QuestionEditor = ({
     );
   }
 
-  // ✏️ Default editor for non-footer questions
+  // 🟡 TEXT BLOCK EDITOR (NEW)
+  if (q.type === 'text_block') {
+    return (
+      <Box>
+        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+          Text Block Settings
+        </Typography>
+
+        <TextField
+          label="Text Content"
+          fullWidth
+          multiline
+          size="small"
+          minRows={2}
+          sx={{ my: 1 }}
+          value={q.config.text || ''}
+          onChange={(e) => updateConfig('text', e.target.value)}
+        />
+
+        <Typography fontSize={13} fontWeight="bold" sx={{ mt: 2 }}>
+          Alignment
+        </Typography>
+
+        <ButtonGroup size="small" sx={{ mt: 1 }}>
+          <Button
+            variant={q.config.alignment === 'left' ? 'contained' : 'outlined'}
+            onClick={() => updateConfig('alignment', 'left')}
+          >
+            Left
+          </Button>
+          <Button
+            variant={q.config.alignment === 'center' ? 'contained' : 'outlined'}
+            onClick={() => updateConfig('alignment', 'center')}
+          >
+            Center
+          </Button>
+          <Button
+            variant={q.config.alignment === 'right' ? 'contained' : 'outlined'}
+            onClick={() => updateConfig('alignment', 'right')}
+          >
+            Right
+          </Button>
+        </ButtonGroup>
+      </Box>
+    );
+  }
+
+  // ✏️ DEFAULT EDITOR
   return (
     <Box>
       <TextField
@@ -119,14 +175,16 @@ const QuestionEditor = ({
         <option value="dropdown">Dropdown</option>
         <option value="table">Excel Table</option>
         <option value="footer">Footer Section</option>
+        <option value="text_block">Text Only Block</option> {/* NEW */}
       </TextField>
 
-      {/* render options if multiple choice / checkbox / dropdown */}
+      {/* OPTIONS */}
       {['multiple_choice', 'checkbox', 'dropdown'].includes(q.type) && (
         <Box>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>
             Options
           </Typography>
+
           {q.options.map((opt, idx) => (
             <TextField
               key={idx}
@@ -151,6 +209,7 @@ const QuestionEditor = ({
               }}
             />
           ))}
+
           <Typography
             onClick={() => addOption(q.id)}
             sx={{

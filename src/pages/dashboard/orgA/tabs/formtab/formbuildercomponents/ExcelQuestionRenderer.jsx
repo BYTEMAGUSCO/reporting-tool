@@ -308,14 +308,21 @@ const ExcelQuestionRenderer = ({
 
               return (
                 <Box key={colIndex} sx={{ p: 1, borderLeft: "1px solid #eee" }}>
-                  <TextField
-                    fullWidth
-                    variant="standard"
-                    value={value}
-                    disabled={readOnly}
-                    onChange={(e) => handleCellChange(rowIndex, colKey, e.target.value)}
-                    inputProps={{ sx: { textAlign: "center" } }}
-                  />
+                <TextField
+                  fullWidth
+                  variant="standard"
+                  value={value}
+                  disabled={readOnly}
+                  onChange={(e) => handleCellChange(rowIndex, colKey, e.target.value)}
+                  error={isSubmitMode && col.editable !== false && (!value || String(value).trim() === "")}
+                  helperText={
+                    isSubmitMode && col.editable !== false && (!value || String(value).trim() === "")
+                      ? "Required"
+                      : ""
+                  }
+                  inputProps={{ sx: { textAlign: "center" } }}
+                />
+
                 </Box>
               );
             })}

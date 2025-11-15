@@ -7,7 +7,7 @@ class FormQuestion {
     this.type = type;
     this.options = options;
 
-    // 🟢 Handle special component types
+    // 🟢 TABLE TYPE
     if (type === 'table') {
       this.config = {
         columns:
@@ -25,7 +25,7 @@ class FormQuestion {
       };
     }
 
-    // 🟣 New Footer Type
+    // 🟣 FOOTER TYPE
     else if (type === 'footer') {
       this.config = {
         preparedByLabel: config.preparedByLabel || 'Prepared by',
@@ -39,19 +39,28 @@ class FormQuestion {
       };
     }
 
-    // ⚙️ Default config for other question types
+    // 🟡 NEW TEXT BLOCK TYPE
+    else if (type === 'text_block') {
+      this.config = {
+        text: config.text || 'Text Block',
+        alignment: config.alignment || 'left', // left | center | right
+      };
+      this.label = ''; // Text blocks don’t use labels
+    }
+
+    // ⚙️ DEFAULT CONFIG FOR OTHER TYPES
     else {
       this.config = config;
     }
   }
 
-  // ✏️ General field updater
+  // ✏️ GENERAL UPDATER
   updateField(key, value) {
     if (key in this) this[key] = value;
     else this.config[key] = value;
   }
 
-  // 🧩 Option handling (radio/checkbox/dropdown)
+  // 🧩 OPTION HANDLING
   addOption(option = 'New Option') {
     const validTypes = ['multiple_choice', 'checkbox', 'dropdown'];
     if (validTypes.includes(this.type)) {
@@ -71,7 +80,7 @@ class FormQuestion {
     }
   }
 
-  // 🧱 Table column handling
+  // 🧱 TABLE COLUMN HANDLING
   addColumn(label = 'New Column', editable = true) {
     if (this.type !== 'table') return;
     const key = `col_${uuid().slice(0, 6)}`;
@@ -99,7 +108,7 @@ class FormQuestion {
     }
   }
 
-  // 🧮 Table row handling
+  // 🧮 TABLE ROW HANDLING
   addRow(label = null) {
     if (this.type !== 'table') return;
     if (!Array.isArray(this.config.rows)) this.config.rows = [];
@@ -129,7 +138,7 @@ class FormQuestion {
     }
   }
 
-  // 🟣 Footer-specific updaters
+  // 🟣 FOOTER UPDATERS
   updateFooterField(key, value) {
     if (this.type !== 'footer') return;
     if (key in this.config) {
@@ -137,7 +146,15 @@ class FormQuestion {
     }
   }
 
-  // 🧠 Serialize to JSON
+  // 🟡 TEXT BLOCK UPDATERS
+  updateTextBlockField(key, value) {
+    if (this.type !== 'text_block') return;
+    if (key in this.config) {
+      this.config[key] = value;
+    }
+  }
+
+  // 🧠 SERIALIZE
   toJSON() {
     return {
       id: this.id,
@@ -148,7 +165,7 @@ class FormQuestion {
     };
   }
 
-  // 🪄 Recreate instance from stored data
+  // 🪄 DESERIALIZE
   static fromJSON(data) {
     const instance = new FormQuestion();
     instance.id = data.id || uuid();
@@ -172,7 +189,9 @@ class FormQuestion {
           : [{ label: 'Row 1' }],
         rowHeaderLabel: data.config?.rowHeaderLabel || 'Row Name',
       };
-    } else if (data.type === 'footer') {
+    }
+
+    else if (data.type === 'footer') {
       instance.config = {
         preparedByLabel: data.config?.preparedByLabel || 'Prepared by',
         submittedByLabel: data.config?.submittedByLabel || 'Submitted by',
@@ -183,7 +202,17 @@ class FormQuestion {
           data.config?.noteText ||
           'Note: This form is generated and submitted through the Report Management System.',
       };
-    } else {
+    }
+
+    else if (data.type === 'text_block') {
+      instance.config = {
+        text: data.config?.text || 'Text Block',
+        alignment: data.config?.alignment || 'left',
+      };
+      instance.label = '';
+    }
+
+    else {
       instance.config = data.config || {};
     }
 

@@ -81,7 +81,7 @@ const FormsTable = ({ forms, onPreview, onDelete, onToggleVisibility, deletingFo
               <strong>Visible</strong>
             </TableCell>
             <TableCell align="right">
-              <strong>Actions</strong>
+              <strong>View</strong>
             </TableCell>
           </TableRow>
         </TableHead>

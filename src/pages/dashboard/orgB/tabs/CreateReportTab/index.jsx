@@ -101,16 +101,19 @@ const CreateReportTab = () => {
   // ================================
   // 📄 PDF + Upload via service
   // ================================
-  const handleFormSubmit = async (formJSON) => {
-    await generateReportPDF({
-      selectedQuestions,
-      formJSON,
-      forms,
-      selectedFormId,
-      getSessionToken,
-      getBarangayNameFromSession,
-    });
-  };
+ const handleFormSubmit = async (formJSON) => {
+  await generateReportPDF({
+    selectedQuestions,
+    formJSON,
+    answers,                 // ⭐ ADD THIS
+    form_id: selectedFormId, // ⭐ OPTIONAL: send as form_id for clarity
+    selectedFormId,          // still sending for backward compat
+    forms,
+    getSessionToken,
+    getBarangayNameFromSession,
+  });
+};
+
 
   // ================================
   // 🧾 Render

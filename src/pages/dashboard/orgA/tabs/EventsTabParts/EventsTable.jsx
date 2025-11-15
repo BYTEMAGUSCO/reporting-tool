@@ -1,6 +1,25 @@
-import { Table, TableHead, TableRow, TableCell, TableBody, Skeleton, Typography, Box, Select, MenuItem } from "@mui/material";
+import {
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Skeleton,
+  Typography,
+  Box,
+  Select,
+  MenuItem,
+  Chip,
+  Stack,
+  Tooltip,
+} from "@mui/material";
+
 import EventRow from "./EventRow";
 import { useState } from "react";
+
+// helper: find barangay name
+const getBrgyName = (barangayList, id) =>
+  barangayList.find((b) => b.id === id)?.name || "Unknown";
 
 const EventsTable = ({
   events,
@@ -12,7 +31,7 @@ const EventsTable = ({
   approvingId,
   denyingId,
   onRowClick,
-  userRole, // <-- add this prop
+  userRole,
 }) => {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [filterBrgy, setFilterBrgy] = useState("ALL");
@@ -22,6 +41,20 @@ const EventsTable = ({
     const brgyMatch = filterBrgy === "ALL" || ev.barangay === filterBrgy;
     return statusMatch && brgyMatch;
   });
+
+  // style logic for attendance badges
+  const attendanceChip = (record) => {
+    if (!record)
+      return <Chip label="No response" size="small" color="default" variant="outlined" />;
+
+    if (record.is_attending === true)
+      return <Chip label="Attending" size="small" color="success" />;
+
+    if (record.is_attending === false)
+      return <Chip label="Not Attending" size="small" color="error" />;
+
+    return <Chip label="No response" size="small" variant="outlined" />;
+  };
 
   return (
     <Box>
@@ -52,7 +85,7 @@ const EventsTable = ({
         </Select>
       </Box>
 
-      <Table size="small" stickyHeader sx={{ minWidth: 1000 }}>
+      <Table size="small" stickyHeader sx={{ minWidth: 1200 }}>
         <TableHead>
           <TableRow>
             <TableCell><strong>Name</strong></TableCell>
@@ -60,7 +93,13 @@ const EventsTable = ({
             <TableCell><strong>Barangay</strong></TableCell>
             <TableCell><strong>Description</strong></TableCell>
             <TableCell><strong>Date</strong></TableCell>
-            <TableCell><strong>Remarks</strong></TableCell>
+
+            {/* ⭐ NEW COLUMN */}
+            <TableCell><strong>Attendance</strong></TableCell>
+
+            {/* ⭐ NEW COLUMN */}
+            <TableCell><strong>Attendance Remarks</strong></TableCell>
+
             <TableCell align="right"><strong>Action</strong></TableCell>
           </TableRow>
         </TableHead>
@@ -69,7 +108,7 @@ const EventsTable = ({
           {loading ? (
             Array.from({ length: PAGE_LIMIT }).map((_, i) => (
               <TableRow key={i}>
-                {Array(6)
+                {Array(8)
                   .fill()
                   .map((_, j) => (
                     <TableCell key={j}>
@@ -80,30 +119,92 @@ const EventsTable = ({
             ))
           ) : filteredEvents.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={6}>
+              <TableCell colSpan={8}>
                 <Typography align="center" sx={{ py: 2 }}>
                   No events found.
                 </Typography>
               </TableCell>
             </TableRow>
           ) : (
-            filteredEvents.map((event) => (
-              <EventRow
-                key={event.id}
-                event={event}
-                barangayList={barangayList}
-                handleApprove={handleApprove}
-                handleDeny={handleDeny}
-                approvingId={approvingId}
-                denyingId={denyingId}
-                loading={loading}
-                onClick={(e) => {
-                  if (e.target.nodeName !== "BUTTON" && e.target.nodeName !== "DIV")
-                    onRowClick(event);
-                }}
-                userRole={userRole} // <-- pass userRole here
-              />
-            ))
+            filteredEvents.map((event) => {
+              // each event may have 0-N attendance rows
+              const attendanceRecords = event.attendance || [];
+
+              // join barangay names
+              const barangayNames = attendanceRecords
+                .map((rec) => getBrgyName(barangayList, rec.barangay_id))
+                .join(", ") || "—";
+
+              // UI only shows FIRST matching attendance for the event's assigned barangay
+              const primaryRecord = attendanceRecords.find(
+                (r) => r.barangay_id === event.barangay
+              );
+
+              return (
+                <TableRow
+                  key={event.id}
+                  hover
+                  sx={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    if (e.target.nodeName !== "BUTTON") onRowClick(event);
+                  }}
+                >
+                  <TableCell>{event.name}</TableCell>
+
+                  <TableCell>
+                    {event.status === "P" && <Chip label="Pending" color="warning" size="small" />}
+                    {event.status === "A" && <Chip label="Approved" color="success" size="small" />}
+                    {event.status === "D" && <Chip label="Denied" color="error" size="small" />}
+                  </TableCell>
+
+                  <TableCell>{getBrgyName(barangayList, event.barangay)}</TableCell>
+
+                  <TableCell>{event.description}</TableCell>
+                  <TableCell>
+                    {event.date_time_start} → {event.date_time_end}
+                  </TableCell>
+
+                  {/* ⭐ NEW — Attendance Status */}
+                  <TableCell>
+                    {attendanceChip(primaryRecord)}
+                  </TableCell>
+
+                  {/* ⭐ NEW — Attendance Remarks */}
+                  <TableCell>
+                    {primaryRecord?.remarks ? (
+                      <Tooltip title={primaryRecord.remarks}>
+                        <Typography
+                          sx={{
+                            maxWidth: "200px",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          {primaryRecord.remarks}
+                        </Typography>
+                      </Tooltip>
+                    ) : (
+                      <Typography sx={{ color: "text.secondary" }}>—</Typography>
+                    )}
+                  </TableCell>
+
+                  <TableCell align="right">
+                    <EventRow
+                      event={event}
+                      barangayList={barangayList}
+                      handleApprove={handleApprove}
+                      handleDeny={handleDeny}
+                      approvingId={approvingId}
+                      denyingId={denyingId}
+                      loading={loading}
+                      userRole={userRole}
+                    />
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>
