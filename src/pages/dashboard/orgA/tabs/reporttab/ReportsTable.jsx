@@ -16,44 +16,45 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined';
 import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 
-const StyledTableCell = (props) => (
-  <TableCell
-    {...props}
-    sx={{
-      fontWeight: 'bold',
-      color: 'black',
-      whiteSpace: 'nowrap',
-      textTransform: 'none',
-      fontSize: '0.875rem',
-      paddingY: 1,
-      paddingX: 2,
-    }}
-  />
-);
+const StyledTableCell = ({ children, align, colSpan, rowSpan, sx }) => {
+  return (
+    <TableCell
+      align={align}
+      colSpan={colSpan}
+      rowSpan={rowSpan}
+      sx={{
+        fontWeight: 'bold',
+        color: 'black',
+        whiteSpace: 'nowrap',
+        textTransform: 'none',
+        fontSize: '0.875rem',
+        paddingY: 1,
+        paddingX: 2,
+        ...sx,
+      }}
+    >
+      {children}
+    </TableCell>
+  );
+};
+
 
 const ReportsTable = ({
   reports,
   approvingReportId,
   rejectingReportId,
+  forwardingReportId,    // ⭐ NEW
   onApprove,
   onReject,
-  activeTab, // 0 = Pending, 1 = Approved, 2 = Denied
+  onForward,             // ⭐ NEW
+  activeTab,             // 0 = Pending, 1 = Approved, 2 = Denied
   loading,
 }) => {
-  const statusMap = {
-    0: 'P',
-    1: 'A',
-    2: 'D',
-  };
+  const statusMap = { 0: 'P', 1: 'A', 2: 'D' };
 
   const filteredReports = reports.filter(
     (report) => report.report_status === statusMap[activeTab]
   );
-
-  // ✅ Log approved reports only
-  if (statusMap[activeTab] === 'A') {
-    console.log('[✅ Approved Reports]', filteredReports);
-  }
 
   if (loading) {
     return (
@@ -148,7 +149,6 @@ const ReportsTable = ({
 
                 {(activeTab === 1 || activeTab === 2) && (
                   <>
-                    {/* ✅ Unified Reviewed By */}
                     <TableCell
                       sx={{
                         whiteSpace: 'normal',
@@ -161,7 +161,6 @@ const ReportsTable = ({
                       {report.reviewed_by || 'No reviewer email'}
                     </TableCell>
 
-                    {/* ✅ Reviewed At */}
                     <TableCell
                       sx={{
                         whiteSpace: 'nowrap',
@@ -191,24 +190,18 @@ const ReportsTable = ({
                 )}
 
                 <TableCell align="right">
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    justifyContent="flex-end"
-                    flexWrap="nowrap"
-                  >
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+
+                    {/* APPROVE + REJECT only in Pending */}
                     {activeTab === 0 && (
                       <>
-                        {/* APPROVE */}
                         <Button
                           variant="contained"
                           size="small"
                           startIcon={
-                            approvingReportId === report.report_id ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <CheckCircleOutlineIcon />
-                            )
+                            approvingReportId === report.report_id
+                              ? <CircularProgress size={16} color="inherit" />
+                              : <CheckCircleOutlineIcon />
                           }
                           onClick={() => onApprove(report.report_id)}
                           sx={{
@@ -217,34 +210,19 @@ const ReportsTable = ({
                             fontWeight: '600 !important',
                             borderRadius: '0.5rem !important',
                             textTransform: 'none !important',
-                            px: 1.8,
-                            py: 0.6,
-                            '&:hover': {
-                              backgroundColor: '#16a34a !important',
-                              transform: 'scale(0.97)',
-                            },
-                            '&:disabled': {
-                              backgroundColor: '#86efac !important',
-                              color: '#f0fdf4 !important',
-                            },
                           }}
                           disabled={approvingReportId === report.report_id}
                         >
-                          {approvingReportId === report.report_id
-                            ? 'Approving...'
-                            : 'Approve'}
+                          {approvingReportId === report.report_id ? 'Approving...' : 'Approve'}
                         </Button>
 
-                        {/* REJECT */}
                         <Button
                           variant="contained"
                           size="small"
                           startIcon={
-                            rejectingReportId === report.report_id ? (
-                              <CircularProgress size={16} color="inherit" />
-                            ) : (
-                              <CancelOutlinedIcon />
-                            )
+                            rejectingReportId === report.report_id
+                              ? <CircularProgress size={16} color="inherit" />
+                              : <CancelOutlinedIcon />
                           }
                           onClick={() => onReject(report.report_id)}
                           sx={{
@@ -253,22 +231,10 @@ const ReportsTable = ({
                             fontWeight: '600 !important',
                             borderRadius: '0.5rem !important',
                             textTransform: 'none !important',
-                            px: 1.8,
-                            py: 0.6,
-                            '&:hover': {
-                              backgroundColor: '#dc2626 !important',
-                              transform: 'scale(0.97)',
-                            },
-                            '&:disabled': {
-                              backgroundColor: '#fecaca !important',
-                              color: '#fee2e2 !important',
-                            },
                           }}
                           disabled={rejectingReportId === report.report_id}
                         >
-                          {rejectingReportId === report.report_id
-                            ? 'Rejecting...'
-                            : 'Reject'}
+                          {rejectingReportId === report.report_id ? 'Rejecting...' : 'Reject'}
                         </Button>
                       </>
                     )}
@@ -285,16 +251,35 @@ const ReportsTable = ({
                         fontWeight: '600 !important',
                         borderRadius: '0.5rem !important',
                         textTransform: 'none !important',
-                        px: 1.8,
-                        py: 0.6,
-                        '&:hover': {
-                          backgroundColor: '#1d4ed8 !important',
-                          transform: 'scale(0.97)',
-                        },
                       }}
                     >
                       PDF
                     </Button>
+
+                    {/* ⭐ FORWARD BUTTON — ALWAYS VISIBLE IN ALL TABS */}
+                    <Button
+                      variant="contained"
+                      size="small"
+                      startIcon={
+                        forwardingReportId === report.report_id
+                          ? <CircularProgress size={16} color="inherit" />
+                          : <CheckCircleOutlineIcon />
+                      }
+                      onClick={() => onForward(report.report_id)}
+                      disabled={forwardingReportId === report.report_id}
+                      sx={{
+                        backgroundColor: '#9333ea !important',
+                        color: '#fff !important',
+                        fontWeight: '600 !important',
+                        borderRadius: '0.5rem !important',
+                        textTransform: 'none !important',
+                      }}
+                    >
+                      {forwardingReportId === report.report_id
+                        ? 'Forwarding...'
+                        : 'Forward'}
+                    </Button>
+
                   </Stack>
                 </TableCell>
               </TableRow>

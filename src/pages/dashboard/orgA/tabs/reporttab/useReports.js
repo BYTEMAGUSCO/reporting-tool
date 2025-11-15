@@ -31,11 +31,7 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
       const token = session?.access_token ?? "";
       const userId = session?.user?.id ?? "";
 
-      console.log("🧑‍💻 Logged-in User ID:", userId);
-
-      // ====================================================
       // 1️⃣ FETCH ALL FORMS
-      // ====================================================
       const formsRes = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -44,85 +40,68 @@ const useReports = (userRole, userBarangay, page, activeTab, barangays = []) => 
       const formsJson = await formsRes.json();
       const allForms = formsJson.data || [];
 
-      console.log("📄 ALL FORMS (from backend):", allForms);
-
       const formOwnerMap = {};
       allForms.forEach(f => {
         formOwnerMap[f.form_id] = f.added_by;
       });
 
-      console.log("📌 formOwnerMap (form_id → owner_id):", formOwnerMap);
-
-      // ====================================================
       // 2️⃣ FETCH ALL REPORTS
-      // ====================================================
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Failed to load reports");
-      }
-
       const json = await res.json();
       const rawReports = json.data || [];
 
-      console.log("📥 RAW REPORTS (from backend):", rawReports);
+      console.log("📥 RAW REPORTS →", rawReports);
 
-      // ====================================================
-      // 3️⃣ FILTER REPORTS BY FORM OWNER
-      // ====================================================
-      const ownerReports = rawReports.filter(r => {
-        const ownerId = formOwnerMap[r.form_id];
+      // DEBUG: Confirm if backend actually sends this field
+      if (rawReports.length > 0) {
+        console.log("🔍 forward_to_superadmin from backend:", rawReports[0].forward_to_superadmin);
+      }
 
-        console.log(
-          `🔎 Report ${r.report_id} | form_id=${r.form_id} | ownerId=${ownerId} | matchesUser=${ownerId === userId}`
-        );
+      // 3️⃣ FILTER BY FORM OWNER
+      const ownerReports = rawReports.filter(r => formOwnerMap[r.form_id] === userId);
 
-        return ownerId === userId;
-      });
-
-      console.log("🎯 Reports that belong to THIS USER ONLY:", ownerReports);
-
-      // ====================================================
-      // 4️⃣ Attach barangay name
-      // ====================================================
+      // 4️⃣ Add barangay name
       const enriched = ownerReports.map((r) => ({
         ...r,
         barangay_name: findBarangayInFilename(r.report_name, barangays),
       }));
 
-      // ====================================================
-      // 5️⃣ FILTER BY BARANGAY
-      // ====================================================
       let filtered = enriched;
 
-      if (userRole === "S" || userRole === "D") {
+      // ⭐ SUPERADMIN → ONLY SHOW FORWARDED REPORTS
+      if (userRole === "S") {
+        filtered = filtered.filter((r) => {
+          // handle undefined/null
+          return r.forward_to_superadmin === true;
+        });
+      }
+
+      // ⭐ DILG filter by dropdown
+      else if (userRole === "D") {
         if (userBarangay !== "All") {
           filtered = filtered.filter((r) => r.barangay_name === userBarangay);
         }
-      } else {
+      }
+
+      // ⭐ Barangay user sees only their barangay
+      else {
         filtered = filtered.filter((r) => r.barangay_name === userBarangay);
       }
 
-      // ====================================================
-      // 6️⃣ FILTER BY STATUS
-      // ====================================================
+      // 7️⃣ STATUS FILTER
       const statusCode = statusMap[activeTab];
       filtered = filtered.filter((r) => r.report_status === statusCode);
 
-      console.log("✅ FINAL FILTERED REPORTS:", filtered);
+      console.log("🎯 FINAL FILTERED:", filtered);
 
-      // ====================================================
-      // 7️⃣ PAGINATION
-      // ====================================================
+      // 🔟 PAGINATION
       setAllFiltered(filtered);
       const start = (page - 1) * 10;
-      const end = start + 10;
-
-      setReports(filtered.slice(start, end));
+      setReports(filtered.slice(start, start + 10));
       setTotalPages(Math.ceil(filtered.length / 10));
 
     } catch (err) {

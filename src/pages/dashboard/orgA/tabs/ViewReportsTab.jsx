@@ -33,13 +33,15 @@ import { loginBtnStyles, btnOutlinedStyles } from './reporttab/styles';
 
 const PAGE_SIZE = 10;
 
-// ✅ Animated counter (unchanged)
+// Animated Counter
 const AnimatedCounter = ({ target, color }) => {
   const [count, setCount] = useState(0);
+
   useEffect(() => {
     let start = 0;
     const duration = 400;
     const step = Math.ceil(target / 20);
+
     const timer = setInterval(() => {
       start += step;
       if (start >= target) {
@@ -49,6 +51,7 @@ const AnimatedCounter = ({ target, color }) => {
         setCount(start);
       }
     }, duration / 20);
+
     return () => clearInterval(timer);
   }, [target]);
 
@@ -70,9 +73,8 @@ const ViewReportsTabFilteredByBarangay = () => {
   const [rejectingReportId, setRejectingReportId] = useState(null);
   const [remarks, setRemarks] = useState('');
 
-  const [activeTab, setActiveTab] = useState(0); // 0=pending,1=approved,2=rejected
+  const [activeTab, setActiveTab] = useState(0);
 
-  // ✅ DATA STATES
   const [allReports, setAllReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
   const [pageReports, setPageReports] = useState([]);
@@ -80,129 +82,132 @@ const ViewReportsTabFilteredByBarangay = () => {
   const [counts, setCounts] = useState({ approved: 0, pending: 0, rejected: 0 });
   const [loading, setLoading] = useState(false);
 
-  // ✅ Load session
+  const [forwardingReportId, setForwardingReportId] = useState(null);
+
+  // Load session metadata
   useEffect(() => {
     const session = JSON.parse(sessionStorage.getItem('session'));
     setUserBarangay(session?.user?.user_metadata?.barangay || null);
     setUserRole(session?.user?.user_metadata?.role || null);
   }, []);
 
+  // Fetch reports
   useEffect(() => {
-  if (!userRole) return;
+    if (!userRole) return;
 
-  const fetchReports = async () => {
-    setLoading(true);
+    const fetchReports = async () => {
+      setLoading(true);
 
-    try {
-      const session = JSON.parse(sessionStorage.getItem("session"));
-      const token = session?.access_token ?? "";
-      const userId = session?.user?.id ?? "";
+      try {
+        const session = JSON.parse(sessionStorage.getItem("session"));
+        const token = session?.access_token ?? "";
+        const userId = session?.user?.id ?? "";
 
-      // 1️⃣ Fetch ALL forms first
-      const formsRes = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        // Fetch ALL forms (so we know the owners)
+        const formsRes = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      const formsJson = await formsRes.json();
-      const allForms = formsJson.data || [];
+        const formsJson = await formsRes.json();
+        const allForms = formsJson.data || [];
 
-      const formOwnerMap = {};
-      allForms.forEach(f => formOwnerMap[f.form_id] = f.added_by);
+        const formOwnerMap = {};
+        allForms.forEach(f => (formOwnerMap[f.form_id] = f.added_by));
 
-      // 2️⃣ Fetch ALL reports
-      const res = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+        // Fetch ALL reports
+        const res = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/reports?limit=9999`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      const json = await res.json();
-      const raw = json.data || [];
+        const json = await res.json();
+        const raw = json.data || [];
 
-      // 3️⃣ Only keep reports whose form belongs to THIS USER
-      const ownerReports = raw.filter(r => formOwnerMap[r.form_id] === userId);
+        console.log("RAW REPORTS FROM BACKEND:", raw);
 
-      console.log("📌 Reports that belong to THIS USER:", ownerReports);
+        // Select final dataset
+        let finalReports;
 
-      setAllReports(ownerReports);
+        if (userRole === "S") {
+          finalReports = raw.filter(r => r.forward_to_superadmin === true);
+        } else {
+          finalReports = raw.filter(r => formOwnerMap[r.form_id] === userId);
+        }
 
-    } catch (err) {
-      console.error("Failed to load reports:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+        // ⭐ FIXED: correct variable
+        setAllReports(finalReports);
 
-  fetchReports();
-}, [userRole]);
+      } catch (err) {
+        await showErrorAlert("Failed to load reports");
+      } finally {
+        setLoading(false);
+      }
+    };
 
+    fetchReports();
+  }, [userRole]);
 
-  // ✅ Fetch barangays
+  // Fetch barangays
   useEffect(() => {
     const fetchBarangays = async () => {
       try {
         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/barangays`);
         const data = await res.json();
         setBarangays(data);
-        console.log(data);
-      } catch (err) {
-        console.error('Failed to load barangays:', err);
-      }
+      } catch (err) {}
     };
     fetchBarangays();
   }, []);
 
-  // ✅ Filter all reports by barangay + tab
+  // Filter logic by role + barangay + status
   useEffect(() => {
     let f = [...allReports];
 
-    // ✅ Filter by barangay (super admin can choose)
-    if (userRole === 'S' || userRole === 'D') {
-      if (selectedBarangay !== 'All') {
-        f = f.filter((r) => String(r.barangay) === String(selectedBarangay));
+    if (userRole === "S") {
+      f = f.filter(r => r.forward_to_superadmin === true);
+    } else if (userRole === "D") {
+      if (selectedBarangay !== "All") {
+        f = f.filter(r => String(r.barangay) === String(selectedBarangay));
       }
     } else {
-      f = f.filter((r) => String(r.barangay) === String(userBarangay));
+      f = f.filter(r => String(r.barangay) === String(userBarangay));
     }
 
-    // ✅ Tab filter
     const statusMap = ['P', 'A', 'D'];
-    f = f.filter((r) => r.report_status === statusMap[activeTab]);
+    f = f.filter(r => r.report_status === statusMap[activeTab]);
 
     setFilteredReports(f);
     setPage(1);
   }, [allReports, selectedBarangay, activeTab, userRole, userBarangay]);
 
-// ✅ Counters update based on selected barangay + user role
-useEffect(() => {
-  let data = [...allReports];
+  // Counters
+  useEffect(() => {
+    let data = [...allReports];
 
-  // Super Admin or DILG can filter by barangay dropdown
-  if (userRole === "S" || userRole === "D") {
-    if (selectedBarangay !== "All") {
-      data = data.filter(r => String(r.barangay) === String(selectedBarangay));
+    if (userRole === "S" || userRole === "D") {
+      if (selectedBarangay !== "All") {
+        data = data.filter(r => String(r.barangay) === String(selectedBarangay));
+      }
+    } else {
+      data = data.filter(r => String(r.barangay) === String(userBarangay));
     }
-  } else {
-    // Barangay users only see their own records
-    data = data.filter(r => String(r.barangay) === String(userBarangay));
-  }
 
-  const approved = data.filter(r => r.report_status === "A").length;
-  const pending  = data.filter(r => r.report_status === "P").length;
-  const rejected = data.filter(r => r.report_status === "D").length;
+    setCounts({
+      approved: data.filter(r => r.report_status === "A").length,
+      pending: data.filter(r => r.report_status === "P").length,
+      rejected: data.filter(r => r.report_status === "D").length,
+    });
+  }, [allReports, selectedBarangay, userRole, userBarangay]);
 
-  setCounts({ approved, pending, rejected });
-}, [allReports, selectedBarangay, userRole, userBarangay]);
-
-
-  // ✅ Paginate filtered results
+  // Pagination
   useEffect(() => {
     const start = (page - 1) * PAGE_SIZE;
     const end = start + PAGE_SIZE;
     setPageReports(filteredReports.slice(start, end));
   }, [filteredReports, page]);
 
-  // ✅ Approve
+  // Approve
   const handleApprove = async (id) => {
     try {
       const token = JSON.parse(sessionStorage.getItem('session'))?.access_token ?? '';
@@ -214,14 +219,14 @@ useEffect(() => {
           body: JSON.stringify({ report_id: id }),
         }
       );
-      if (!res.ok) throw new Error('Failed to approve');
+      if (!res.ok) throw new Error();
       await showSuccessAlert('Report approved!');
     } catch (err) {
-      await showErrorAlert(err.message);
+      await showErrorAlert('Failed to approve');
     }
   };
 
-  // ✅ Reject
+  // Reject
   const handleSubmitRemarks = async () => {
     if (!remarks.trim()) return showErrorAlert('Enter remarks');
     try {
@@ -234,13 +239,44 @@ useEffect(() => {
           body: JSON.stringify({ report_id: rejectingReportId, remarks }),
         }
       );
-      if (!res.ok) throw new Error('Failed to reject');
+      if (!res.ok) throw new Error();
       await showSuccessAlert('Rejected!');
     } catch (err) {
-      await showErrorAlert(err.message);
+      await showErrorAlert('Failed to reject');
     } finally {
       setRemarks('');
       setRemarksDialogOpen(false);
+    }
+  };
+
+  // Forward
+  const handleForward = async (reportId) => {
+    try {
+      setForwardingReportId(reportId);
+
+      const session = JSON.parse(sessionStorage.getItem("session"));
+      const token = session?.access_token ?? "";
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/forward-report`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ report_id: reportId }),
+        }
+      );
+
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Failed to forward");
+
+      await showSuccessAlert("Report forwarded!");
+    } catch (err) {
+      await showErrorAlert(err.message);
+    } finally {
+      setForwardingReportId(null);
     }
   };
 
@@ -255,7 +291,6 @@ useEffect(() => {
 
       <Divider sx={{ mb: 2 }} />
 
-      {/* ✅ Barangay Filter */}
       {(userRole === 'S' || userRole === 'D') && (
         <FormControl fullWidth sx={{ mb: 2 }}>
           <InputLabel>Filter by Barangay</InputLabel>
@@ -272,13 +307,12 @@ useEffect(() => {
         </FormControl>
       )}
 
-      {/* ✅ Counters */}
       <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
         <Card sx={{ flex: 1, background: '#facc15' }}>
           <CardContent sx={{ textAlign: 'center' }}>
             <HourglassBottomIcon />
             <AnimatedCounter target={counts.pending} color="black" />
-            <Typography>Pending Reports</Typography>
+            <Typography>Pending</Typography>
           </CardContent>
         </Card>
 
@@ -286,7 +320,7 @@ useEffect(() => {
           <CardContent sx={{ textAlign: 'center' }}>
             <DoneAllIcon />
             <AnimatedCounter target={counts.approved} color="white" />
-            <Typography>Approved Reports</Typography>
+            <Typography>Approved</Typography>
           </CardContent>
         </Card>
 
@@ -294,12 +328,11 @@ useEffect(() => {
           <CardContent sx={{ textAlign: 'center' }}>
             <BlockIcon />
             <AnimatedCounter target={counts.rejected} color="white" />
-            <Typography>Rejected Reports</Typography>
+            <Typography>Rejected</Typography>
           </CardContent>
         </Card>
       </Stack>
 
-      {/* ✅ Tabs */}
       <Paper elevation={2} sx={{ mb: 2 }}>
         <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)} variant="fullWidth">
           <Tab icon={<HourglassBottomIcon />} label="Pending" />
@@ -308,18 +341,19 @@ useEffect(() => {
         </Tabs>
       </Paper>
 
-      {/* ✅ Table Component */}
       <ReportsTable
         reports={pageReports}
         loading={loading}
         activeTab={activeTab}
-        loginBtnStyles={loginBtnStyles}
-        btnOutlinedStyles={btnOutlinedStyles}
         onApprove={handleApprove}
-        onReject={(id) => { setRejectingReportId(id); setRemarksDialogOpen(true); }}
+        onReject={(id) => {
+          setRejectingReportId(id);
+          setRemarksDialogOpen(true);
+        }}
+        onForward={handleForward}
+        forwardingReportId={forwardingReportId}
       />
 
-      {/* ✅ Pagination */}
       <Box mt={2} display="flex" justifyContent="center">
         <Pagination
           count={Math.ceil(filteredReports.length / PAGE_SIZE)}
@@ -328,7 +362,6 @@ useEffect(() => {
         />
       </Box>
 
-      {/* ✅ Reject Dialog */}
       <Dialog open={remarksDialogOpen} onClose={() => setRemarksDialogOpen(false)}>
         <DialogTitle>Reject Report</DialogTitle>
         <DialogContent>
