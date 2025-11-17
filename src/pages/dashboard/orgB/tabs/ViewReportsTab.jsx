@@ -56,6 +56,8 @@ const ViewReportsTabFilteredByBarangay = () => {
 
   const [stats, setStats] = useState({ approved: 0, pending: 0, rejected: 0 });
 
+  
+
   // Tabs: 0=approved, 1=pending, 2=rejected
   const [activeTab, setActiveTab] = useState(0);
 
@@ -152,6 +154,9 @@ const ViewReportsTabFilteredByBarangay = () => {
     );
   };
 
+  const actionColumnLabel = activeTab === 1 ? 'View' : 'Actions';
+
+
   return (
     <Box sx={{ px: 2, py: 2 }}>
       <Paper elevation={2} sx={{ borderRadius: 2, p: 3, mb: 2 }}>
@@ -216,7 +221,8 @@ const ViewReportsTabFilteredByBarangay = () => {
                   </StyledTableCell>
                 )}
                 {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-                <StyledTableCell align="right">Actions</StyledTableCell>
+                <StyledTableCell align="right">{actionColumnLabel}</StyledTableCell>
+
               </TableRow>
             </TableHead>
 

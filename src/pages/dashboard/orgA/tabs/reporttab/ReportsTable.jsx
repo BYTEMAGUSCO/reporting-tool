@@ -57,6 +57,9 @@ const ReportsTable = ({
     (report) => report.report_status === statusMap[activeTab]
   );
 
+  const actionColumnLabel = activeTab === 1 ? 'View' : 'Actions';
+
+
   if (loading) {
     return (
       <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
@@ -72,7 +75,8 @@ const ReportsTable = ({
                 </>
               )}
               {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-              <StyledTableCell align="right">Actions</StyledTableCell>
+              <StyledTableCell align="right">{actionColumnLabel}</StyledTableCell>
+
             </TableRow>
           </TableHead>
 
