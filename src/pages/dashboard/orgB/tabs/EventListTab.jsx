@@ -97,35 +97,41 @@ const EventsTab = () => {
   }, [token, page, userRole, userBarangay]);
 
   const fetchEvents = async (pageNumber = 1) => {
-    setLoading(true);
-    try {
-      const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-      const url = `${baseUrl}/events?page=${pageNumber}&limit=${PAGE_LIMIT}`;
+  setLoading(true);
+  try {
+    const baseUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+    const url = `${baseUrl}/events?page=${pageNumber}&limit=${PAGE_LIMIT}`;
 
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
 
-      if (res.ok) {
-        let list = Array.isArray(data.data) ? data.data : [];
+    if (res.ok) {
+      let list = Array.isArray(data.data) ? data.data : [];
 
-        // 🧹 Removed barangay filtering, we now show all events
-        list = list.map((ev) => ({
-          ...ev,
-          barangay_name: barangays[ev.barangay] || ev.barangay,
-        }));
-
-        setEventsList(list);
-        setTotalPages(Math.ceil((list.length || 0) / PAGE_LIMIT));
-      } else {
-        await showErrorAlert(data.error || 'Failed to fetch events');
+      // 🔥 FILTER: Only show events assigned to the user's barangay
+      if (userBarangay) {
+        list = list.filter((ev) => ev.barangay === userBarangay);
       }
-    } catch (err) {
-      console.error('[EventsTab] Network error:', err);
-      await showErrorAlert('Network error while fetching events');
-    } finally {
-      setLoading(false);
+
+      // Map barangay name
+      list = list.map((ev) => ({
+        ...ev,
+        barangay_name: barangays[ev.barangay] || ev.barangay,
+      }));
+
+      setEventsList(list);
+      setTotalPages(Math.ceil((list.length || 0) / PAGE_LIMIT));
+    } else {
+      await showErrorAlert(data.error || 'Failed to fetch events');
     }
-  };
+  } catch (err) {
+    console.error('[EventsTab] Network error:', err);
+    await showErrorAlert('Network error while fetching events');
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // 🔹 Fetch attendance records for the user's barangay
   useEffect(() => {

@@ -47,10 +47,10 @@ const EventsTable = ({
     if (!record)
       return <Chip label="No response" size="small" color="default" variant="outlined" />;
 
-    if (record.is_attending === true)
+    if (record.is_attending)
       return <Chip label="Attending" size="small" color="success" />;
 
-    if (record.is_attending === false)
+    if (!record.is_attending)
       return <Chip label="Not Attending" size="small" color="error" />;
 
     return <Chip label="No response" size="small" variant="outlined" />;
@@ -94,10 +94,7 @@ const EventsTable = ({
             <TableCell><strong>Description</strong></TableCell>
             <TableCell><strong>Date</strong></TableCell>
 
-            {/* ⭐ NEW COLUMN */}
             <TableCell><strong>Attendance</strong></TableCell>
-
-            {/* ⭐ NEW COLUMN */}
             <TableCell><strong>Attendance Remarks</strong></TableCell>
 
             <TableCell align="right"><strong>Action</strong></TableCell>
@@ -127,17 +124,11 @@ const EventsTable = ({
             </TableRow>
           ) : (
             filteredEvents.map((event) => {
-              // each event may have 0-N attendance rows
               const attendanceRecords = event.attendance || [];
 
-              // join barangay names
-              const barangayNames = attendanceRecords
-                .map((rec) => getBrgyName(barangayList, rec.barangay_id))
-                .join(", ") || "—";
-
-              // UI only shows FIRST matching attendance for the event's assigned barangay
+              // NEW: show only the attendance record that matches the event's assigned barangay
               const primaryRecord = attendanceRecords.find(
-                (r) => r.barangay_id === event.barangay
+                (r) => r.barangay_id == event.barangay
               );
 
               return (
@@ -160,16 +151,15 @@ const EventsTable = ({
                   <TableCell>{getBrgyName(barangayList, event.barangay)}</TableCell>
 
                   <TableCell>{event.description}</TableCell>
+
                   <TableCell>
                     {event.date_time_start} → {event.date_time_end}
                   </TableCell>
 
-                  {/* ⭐ NEW — Attendance Status */}
-                  <TableCell>
-                    {attendanceChip(primaryRecord)}
-                  </TableCell>
+                  {/* Attendance — only the event's assigned barangay */}
+                  <TableCell>{attendanceChip(primaryRecord)}</TableCell>
 
-                  {/* ⭐ NEW — Attendance Remarks */}
+                  {/* Attendance Remarks — only the event's assigned barangay */}
                   <TableCell>
                     {primaryRecord?.remarks ? (
                       <Tooltip title={primaryRecord.remarks}>

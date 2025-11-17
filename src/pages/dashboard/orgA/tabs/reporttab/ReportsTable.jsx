@@ -49,6 +49,7 @@ const ReportsTable = ({
   onForward,             // ⭐ NEW
   activeTab,             // 0 = Pending, 1 = Approved, 2 = Denied
   loading,
+  userRole,
 }) => {
   const statusMap = { 0: 'P', 1: 'A', 2: 'D' };
 
@@ -130,8 +131,8 @@ const ReportsTable = ({
                   activeTab === 2
                     ? 6
                     : activeTab === 1
-                    ? 5
-                    : 3
+                      ? 5
+                      : 3
                 }
                 align="center"
                 sx={{ py: 3, fontStyle: 'italic' }}
@@ -256,29 +257,32 @@ const ReportsTable = ({
                       PDF
                     </Button>
 
-                    {/* ⭐ FORWARD BUTTON — ALWAYS VISIBLE IN ALL TABS */}
-                    <Button
-                      variant="contained"
-                      size="small"
-                      startIcon={
-                        forwardingReportId === report.report_id
-                          ? <CircularProgress size={16} color="inherit" />
-                          : <CheckCircleOutlineIcon />
-                      }
-                      onClick={() => onForward(report.report_id)}
-                      disabled={forwardingReportId === report.report_id}
-                      sx={{
-                        backgroundColor: '#9333ea !important',
-                        color: '#fff !important',
-                        fontWeight: '600 !important',
-                        borderRadius: '0.5rem !important',
-                        textTransform: 'none !important',
-                      }}
-                    >
-                      {forwardingReportId === report.report_id
-                        ? 'Forwarding...'
-                        : 'Forward'}
-                    </Button>
+                    {/* ⭐ FORWARD BUTTON — visible ONLY if userRole !== 'S' */}
+                    {userRole !== 'S' && (
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={
+                          forwardingReportId === report.report_id
+                            ? <CircularProgress size={16} color="inherit" />
+                            : <CheckCircleOutlineIcon />
+                        }
+                        onClick={() => onForward(report.report_id)}
+                        disabled={forwardingReportId === report.report_id}
+                        sx={{
+                          backgroundColor: '#9333ea !important',
+                          color: '#fff !important',
+                          fontWeight: '600 !important',
+                          borderRadius: '0.5rem !important',
+                          textTransform: 'none !important',
+                        }}
+                      >
+                        {forwardingReportId === report.report_id
+                          ? 'Forwarding...'
+                          : 'Forward'}
+                      </Button>
+                    )}
+
 
                   </Stack>
                 </TableCell>
