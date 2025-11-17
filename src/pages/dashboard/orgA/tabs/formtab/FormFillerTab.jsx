@@ -29,24 +29,31 @@ const FormFillerTab = () => {
 
  const [forms, setForms] = useState([]);
 const [loading, setLoading] = useState(true);
-
 useEffect(() => {
   const fetchAllVisibleForms = async () => {
     setLoading(true);
     try {
       const token = getSessionToken();
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       const result = await res.json();
       if (!res.ok) throw new Error(result?.error?.message || 'Failed to fetch forms');
 
-      // only show visible forms
-      const visibleForms = result.data?.filter((f) => f.is_visible === 'Y') || [];
+      const visibleForms = result.data?.filter((f) =>
+        f.is_visible === true ||
+        f.is_visible === 'Y' ||
+        f.is_visible === 'y' ||
+        f.is_visible === 1
+      ) || [];
+
       setForms(visibleForms);
     } catch (err) {
       console.error('Failed to fetch forms:', err);
@@ -57,6 +64,7 @@ useEffect(() => {
 
   fetchAllVisibleForms();
 }, []);
+
 
   useEffect(() => {
     if (selectedFormId) {

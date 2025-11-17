@@ -161,25 +161,36 @@ const ViewReportsTabFilteredByBarangay = () => {
   }, []);
 
   // Filter logic by role + barangay + status
-  useEffect(() => {
-    let f = [...allReports];
+useEffect(() => {
+  let f = [...allReports];
 
-    if (userRole === "S") {
-      f = f.filter(r => r.forward_to_superadmin === true);
-    } else if (userRole === "D") {
-      if (selectedBarangay !== "All") {
-        f = f.filter(r => String(r.barangay) === String(selectedBarangay));
-      }
-    } else {
-      f = f.filter(r => String(r.barangay) === String(userBarangay));
+  // SUPERADMIN: forwarded reports + barangay filter
+  if (userRole === "S") {
+    if (selectedBarangay !== "All") {
+      f = f.filter(r => String(r.barangay) === String(selectedBarangay));
     }
+  }
 
-    const statusMap = ['P', 'A', 'D'];
-    f = f.filter(r => r.report_status === statusMap[activeTab]);
+  // DILG
+  else if (userRole === "D") {
+    if (selectedBarangay !== "All") {
+      f = f.filter(r => String(r.barangay) === String(selectedBarangay));
+    }
+  }
 
-    setFilteredReports(f);
-    setPage(1);
-  }, [allReports, selectedBarangay, activeTab, userRole, userBarangay]);
+  // Barangay user
+  else {
+    f = f.filter(r => String(r.barangay) === String(userBarangay));
+  }
+
+  // Apply status filter
+  const statusMap = ['P', 'A', 'D'];
+  f = f.filter(r => r.report_status === statusMap[activeTab]);
+
+  setFilteredReports(f);
+  setPage(1);
+}, [allReports, selectedBarangay, activeTab, userRole, userBarangay]);
+
 
   // Counters
   useEffect(() => {

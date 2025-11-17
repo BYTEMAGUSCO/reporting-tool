@@ -19,25 +19,47 @@ const CreateReportTab = () => {
   // ================================
   // 🧩 Fetch all forms (once)
   // ================================
-  useEffect(() => {
-    const fetchForms = async () => {
-      setLoadingForms(true);
-      try {
-        const token = getSessionToken();
-        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms`, {
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        });
-        const result = await res.json();
-        if (!res.ok) throw new Error(result?.error?.message || 'Failed to load forms');
-        setForms(result.data || []);
-      } catch (err) {
-        await showErrorAlert(`Failed to load forms: ${err.message || err}`);
-      } finally {
-        setLoadingForms(false);
-      }
-    };
-    fetchForms();
-  }, []);
+ useEffect(() => {
+  const fetchForms = async () => {
+    setLoadingForms(true);
+    try {
+      const token = getSessionToken();
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dynamic-forms?limit=9999`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await res.json();
+      if (!res.ok)
+        throw new Error(result?.error?.message || "Failed to load forms");
+
+      // ⭐ FIX: handle boolean OR string visibility
+      const visibleForms =
+        result.data?.filter(
+          (f) =>
+            f.is_visible === true ||
+            f.is_visible === "Y" ||
+            f.is_visible === "y" ||
+            f.is_visible === 1
+        ) || [];
+
+      setForms(visibleForms);
+    } catch (err) {
+      await showErrorAlert(`Failed to load forms: ${err.message || err}`);
+    } finally {
+      setLoadingForms(false);
+    }
+  };
+
+  fetchForms();
+}, []);
+
 
   // ================================
   // 🧠 Load selected form content
