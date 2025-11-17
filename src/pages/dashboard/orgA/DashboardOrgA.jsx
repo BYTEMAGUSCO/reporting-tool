@@ -105,6 +105,7 @@ const DashboardOrgA = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
+  
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -122,15 +123,16 @@ const DashboardOrgA = () => {
     parsedSession?.[0]?.identity_data?.role;
   const userId =
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
-
+  
   const roleTheme = getRoleTheme(userRole);
   const roleLabels = {
     S: 'Super Admin',
-    D: 'DILG',
-    B: 'Barangay',
+    D: 'DILG STAFF',
+    B: `Barangay`,
   };
   const userRoleLabel = roleLabels[userRole] || 'User';
 
+  
 
   const fetchNotifications = async () => {
     if (!token) return;
@@ -155,6 +157,8 @@ const DashboardOrgA = () => {
       console.error('❌ Error fetching notifications:', err);
     }
   };
+
+
 
   useEffect(() => {
     fetchNotifications();
@@ -267,8 +271,6 @@ const DashboardOrgA = () => {
     {userRoleLabel}
   </Typography>
 </Box>
-
-
           <List sx={{ flexGrow: 1 }}>
             {tabs.map((tab, index) => (
               <ListItem key={index} disablePadding sx={{ mx: 1.5, borderRadius: '0.5rem' }}>

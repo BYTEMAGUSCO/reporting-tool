@@ -352,6 +352,7 @@ const ViewReportsTabFilteredByBarangay = () => {
         }}
         onForward={handleForward}
         forwardingReportId={forwardingReportId}
+        userRole={userRole}
       />
 
       <Box mt={2} display="flex" justifyContent="center">

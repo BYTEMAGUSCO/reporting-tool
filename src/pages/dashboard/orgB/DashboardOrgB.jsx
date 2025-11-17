@@ -99,9 +99,6 @@ const getRoleTheme = (role) => {
   }
 };
 
-
-
-
 const DashboardOrgB = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
@@ -112,6 +109,8 @@ const DashboardOrgB = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [barangayList, setBarangayList] = useState([]);
+  const [barangayName, setBarangayName] = useState('');
 
   const prevNotificationsRef = useRef([]);
 
@@ -123,15 +122,35 @@ const DashboardOrgB = () => {
     parsedSession?.[0]?.identity_data?.role;
   const userId =
     parsedSession?.user?.id || parsedSession?.[0]?.user_id || null;
+  const barangayId =
+    parsedSession?.user?.user_metadata?.barangay ||
+    parsedSession?.[0]?.identity_data?.barangay;
+
 
   const roleTheme = useMemo(() => getRoleTheme(userRole), [userRole]);
     const roleLabels = {
     S: 'Super Admin',
     D: 'DILG',
-    B: 'Barangay',
+    B: `Barangay`,
   };
   const userRoleLabel = roleLabels[userRole] || 'User';
 
+  const fetchBarangays = async () => {
+      try {
+        const res = await fetch('https://juagcyjdhvjonysqbgof.supabase.co/functions/v1/barangays');
+        const data = await res.json();
+        setBarangayList(data);
+      } catch {
+        setBarangayName('Unavailable');
+      }
+    };
+    useEffect(() => {
+      fetchBarangays();
+    }, []);
+  const match = barangayList.find((b) => b.id === barangayId);
+  const fullName = match ? `${match.name}` : barangayId;
+ 
+  
   // Fetch notifications
   const fetchNotifications = async () => {
     if (!token) return;
@@ -248,11 +267,9 @@ const DashboardOrgB = () => {
       letterSpacing: 0.5,
     }}
   >
-    {userRoleLabel}
+    {userRoleLabel + " " + fullName}
   </Typography>
 </Box>
-
-
           <List sx={{ flexGrow: 1 }}>
             {tabs.map((tab, index) => (
               <ListItem key={tab.label} disablePadding sx={{ mx: 1.5, borderRadius: '0.5rem' }}>
