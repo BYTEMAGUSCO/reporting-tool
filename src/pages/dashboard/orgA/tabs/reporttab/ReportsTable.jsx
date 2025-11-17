@@ -123,7 +123,8 @@ const ReportsTable = ({
               </>
             )}
             {activeTab === 2 && <StyledTableCell>Remarks</StyledTableCell>}
-            <StyledTableCell align="right">Actions</StyledTableCell>
+            <StyledTableCell align="right">{actionColumnLabel}</StyledTableCell>
+
           </TableRow>
         </TableHead>
 
