@@ -129,11 +129,19 @@ const ViewReportsTabFilteredByBarangay = () => {
         // Select final dataset
         let finalReports;
 
-        if (userRole === "S") {
-          finalReports = raw.filter(r => r.forward_to_superadmin === true);
-        } else {
-          finalReports = raw.filter(r => formOwnerMap[r.form_id] === userId);
-        }
+if (userRole === "S") {
+  // SUPERADMIN SEES:
+  // ✅ ALL forwarded reports
+  // ✅ THEIR OWN reports
+  finalReports = raw.filter(r =>
+    r.forward_to_superadmin === true ||
+    formOwnerMap[r.form_id] === userId
+  );
+} else {
+  // Normal users only see their own form reports
+  finalReports = raw.filter(r => formOwnerMap[r.form_id] === userId);
+}
+
 
         // ⭐ FIXED: correct variable
         setAllReports(finalReports);
